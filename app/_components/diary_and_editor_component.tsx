@@ -12,8 +12,9 @@ import dynamic from "next/dynamic";
 // SSR（サーバーサイドレンダリング）を無効化して読み込む
 const Tldraw = dynamic(async () => (await import("tldraw")).Tldraw, {
   ssr: false,
-});import "tldraw/tldraw.css";
-
+});
+import type { Editor } from "tldraw";
+import "tldraw/tldraw.css";
  
 
 // --- 型定義 ---
