@@ -7,8 +7,14 @@ import {
   Image as ImageIcon 
 } from "lucide-react";
 import clsx from "clsx";
-import { Tldraw, Editor } from "tldraw";
-import "tldraw/tldraw.css";
+import dynamic from "next/dynamic";
+// import { Tldraw, Editor } from "tldraw"; <-- これを消す
+// SSR（サーバーサイドレンダリング）を無効化して読み込む
+const Tldraw = dynamic(async () => (await import("tldraw")).Tldraw, {
+  ssr: false,
+});import "tldraw/tldraw.css";
+
+ 
 
 // --- 型定義 ---
 export type Article = {

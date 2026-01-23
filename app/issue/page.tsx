@@ -5,11 +5,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Share2, Sparkles, PenTool, X, Check, Type, Palette, Star, Image as ImageIcon, Pencil } from "lucide-react";
 import clsx from "clsx";
 
-import "tldraw/tldraw.css";
-import dynamic from 'next/dynamic';
-const Tldraw = dynamic(async () => (await import('tldraw')).Tldraw, {
-  ssr: false,
-});
+
 
 import { MagazinePreview, EditorPanel } from "../_components/diary_and_editor_component";
 
