@@ -4,8 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, ChevronLeft, Calendar as CalendarIcon, PenTool, Check, Type, Palette, Star, Image as ImageIcon, Pencil } from "lucide-react";
 import clsx from "clsx";
-import { Tldraw } from "tldraw";
-import "tldraw/tldraw.css";
+
 
 // 既存のコンポーネント（パスは適宜調整してください）
 import { MagazinePreview, EditorPanel } from "./_components/diary_and_editor_component";
@@ -97,8 +96,7 @@ export default function Desk() {
     if (viewingArticle?.id === updated.id) {
         setViewingArticle(updated);
     }
-    // テキスト編集後はモード解除
-    setEditMode('none');
+
   };
 
   const handleCalendarSelect = (articleId: string | null) => {
@@ -210,85 +208,79 @@ export default function Desk() {
       </div>
 
       {/* Expanded Preview Modal */}
+      {/* Expanded Preview Modal */}
       <AnimatePresence>
         {viewingArticle && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 pointer-events-auto bg-black/60 backdrop-blur-sm">
                 
-                {/* 背景クリックで閉じる (描画モード中は誤操作防止のため無効にするか検討。今回は有効のまま) */}
                 <div className="absolute inset-0" onClick={handleClosePreview} />
 
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-                    animate={{ opacity: 1, scale: 1, y: 0 }} 
+                    animate={{ 
+                        opacity: 1, 
+                        scale: 1, 
+                        // テキスト編集時はキーボードに隠れないよう少し上にずらす
+                        y: editMode === 'text' ? -100 : 0 
+                    }} 
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    // テキスト編集時はパネルにスペースを譲るため少し上に移動
-                    style={{ 
-                        y: editMode === 'text' ? -40 : 0, 
-                        transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)"
-                    }}
-                    className="relative w-full max-w-[400px] aspect-[3/5] md:aspect-[3/4] shadow-2xl"
+                    className="relative w-full max-w-[400px] aspect-[3/5] md:aspect-[3/4] shadow-2xl z-10"
                 >
-                    {/* 閉じるボタン */}
-                        <button onClick={handleClosePreview} className="absolute -top-12 right-0 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors z-50">
+                    <button onClick={handleClosePreview} className="absolute -top-12 right-0 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 z-50">
                         <X size={20}/>
-                        </button>
+                    </button>
 
-                        {/* プレビュー本体 */}
-                        <MagazinePreview 
+                    <MagazinePreview 
+                        // keyにeditModeを含めないことで、モード切替時にTldrawを再マウントさせない（これが重要）
+                        key={viewingArticle.id}
                         article={viewingArticle} 
                         useTldraw={true}
-                        readOnly={editMode !== 'drawing'} // 描画モード以外は操作不可
+                        readOnly={editMode !== 'drawing'}
                         styleClass="w-full h-full" 
                     />
                         
-                        {/* 編集アクションボタン (何も編集モードに入っていないときのみ表示) */}
-                        {editMode === 'none' && (
-                            <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
-                                <motion.button
-                                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    {editMode === 'none' && (
+                        <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
+                            <button
                                 onClick={() => setEditMode('drawing')}
-                                className="bg-white text-stone-900 w-12 h-12 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                                title="Draw on image"
-                                >
-                                <Pencil size={18} />
-                                </motion.button>
-                                <motion.button
-                                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                onClick={() => setEditMode('text')}
-                                className="bg-stone-900 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                                title="Edit text"
-                                >
-                                <Type size={20} />
-                                </motion.button>
-                            </div>
-                        )}
-
-                        {/* 描画モード中の完了ボタン (オーバーレイがないので直接画像の上に置く) */}
-                        {editMode === 'drawing' && (
-                            <motion.button
-                            initial={{ scale: 0 }} animate={{ scale: 1 }}
-                            onClick={() => setEditMode('none')}
-                            className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 transition-colors"
+                                className="bg-white text-stone-900 w-12 h-12 rounded-full shadow-xl flex items-center justify-center"
                             >
-                                <Check size={24} />
-                            </motion.button>
-                        )}
+                                <PenTool size={18} />
+                            </button>
+                            <button
+                                onClick={() => setEditMode('text')}
+                                className="bg-stone-900 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center"
+                            >
+                                <Type size={20} />
+                            </button>
+                        </div>
+                    )}
 
+                    {editMode === 'drawing' && (
+                        <button
+                            onClick={() => setEditMode('none')}
+                            className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center"
+                        >
+                            <Check size={24} />
+                        </button>
+                    )}
                 </motion.div>
             </div>
         )}
       </AnimatePresence>
 
-      {/* Editor Panel (Text Edit Mode) */}
+      {/* Editor Panel */}
       <AnimatePresence>
         {editMode === 'text' && viewingArticle && (
             <EditorPanel 
                 article={viewingArticle} 
                 onChange={handleUpdateArticle} 
+                // ここで閉じるときにモードを none に戻す
                 onClose={() => setEditMode('none')} 
             />
         )}
       </AnimatePresence>
+
 
       {/* Floating Action Button (Batch Selection) */}
       <AnimatePresence>
