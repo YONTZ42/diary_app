@@ -95,7 +95,6 @@ export const MagazinePreview = ({
                     key={article.id}
                     persistenceKey={`tldraw-store-${article.id}`}
                     hideUi={readOnly}
-                    readOnly={readOnly} // ここを明示的に追加
                     onMount={(ed) => setEditor(ed)}
                     autoFocus={false}
                 />
