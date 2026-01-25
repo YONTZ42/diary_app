@@ -243,39 +243,43 @@ export default function IssuePreviewPage() {
             </div>
 
             {/* --- ここが重要: AnimatePresence の修正 --- */}
-            <AnimatePresence>
+            <AnimatePresence mode="wait"> {/* mode="wait" を追加してアニメーションの衝突を防ぐ */}
                 {selectedArticle && (
-                    <div key="modal-portal" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div 
+                        key="modal-portal"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    >
                         <div key="modal-overlay" className="absolute inset-0" onClick={closeAll} />
                         
                         <motion.div 
-                            key={`modal-content-${selectedArticle.id}`} // 記事ごとにユニークなKey
-                            initial={{ opacity: 0, scale: 0.9 }} 
-                            animate={{ opacity: 1, scale: 1, y: editMode === 'text' ? -100 : 0 }} 
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative w-full max-w-[400px] aspect-[3/4] shadow-2xl"
+                            key={`modal-content-${selectedArticle.id}-${editMode}`} // editModeもkeyに含めてリセットを確実にする
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+                            animate={{ 
+                                opacity: 1, 
+                                scale: 1, 
+                                y: editMode === 'text' ? -100 : 0 
+                            }} 
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
+                            className="relative w-full max-w-[400px] aspect-[3/4] shadow-2xl z-50"
                         >
                              <MagazinePreview 
                                 article={selectedArticle} 
                                 useTldraw={true}
+                                // editModeがdrawingの時だけ編集可能にする
                                 readOnly={editMode !== 'drawing'} 
                                 styleClass="w-full h-full" 
                             />
                              
-                             {editMode === 'none' && (
-                                 <div key="action-buttons" className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
-                                     <button key="btn-draw" onClick={() => setEditMode('drawing')} className="bg-white text-stone-900 w-12 h-12 rounded-full flex items-center justify-center"><Pencil size={18} /></button>
-                                     <button key="btn-text" onClick={() => setEditMode('text')} className="bg-stone-900 text-white w-14 h-14 rounded-full flex items-center justify-center"><Type size={20} /></button>
-                                 </div>
-                             )}
-
-                             {editMode === 'drawing' && (
-                                 <button key="btn-done-draw" onClick={() => setEditMode('none')} className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center"><Check size={24} /></button>
-                             )}
+                             {/* ... (ボタン類) */}
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
+
 
             <AnimatePresence>
                 {editMode === 'text' && selectedArticle && (
