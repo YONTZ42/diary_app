@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
   PenTool, Check, Type, Palette, Star, 
@@ -9,10 +9,12 @@ import {
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 
+// Tldraw本体をSSR無効でインポート
 const Tldraw = dynamic(async () => (await import("tldraw")).Tldraw, {
   ssr: false,
 });
-import type { Editor } from "tldraw";
+
+import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
 import "tldraw/tldraw.css";
 
 export type Article = {
@@ -52,12 +54,20 @@ export const MagazinePreview = ({
   const [editor, setEditor] = useState<Editor | null>(null);
   const { year, month, day } = formatDate(article.date);
 
+  // 【重要】Vercel/本番環境で消えるのを防ぐため、Storeをメモ化して固定する
+  // persistenceKeyは使わず、メモリ内で管理することで同期エラーによる消失を防ぐ
+  const store = useMemo(() => {
+    return createTLStore({ shapeUtils: defaultShapeUtils });
+  }, [article.id]);
+
   useEffect(() => {
     if (!editor) return;
+    
+    // プレビュー表示時に、描画内容が中央に収まるように調整
     if (readOnly) {
       const timer = setTimeout(() => {
         editor.zoomToFit({ animation: { duration: 0 } });
-      }, 150);
+      }, 200);
       return () => clearTimeout(timer);
     }
   }, [editor, readOnly]);
@@ -66,15 +76,16 @@ export const MagazinePreview = ({
     <div 
         onClick={onClick}
         className={clsx(
-            "relative bg-white shadow-xl flex flex-col overflow-hidden rounded-[2px] select-none transform transition-transform duration-300 isolate",
+            "relative bg-white shadow-xl flex flex-col overflow-hidden rounded-[2px] isolate transition-all duration-300",
             styleClass || "aspect-[3/4]"
         )}
     >
+      {/* Header Overlay */}
       <div className={clsx(
-          "absolute top-0 w-full p-4 flex justify-between items-start z-30 pointer-events-none transition-all duration-300",
+          "absolute top-0 w-full p-4 flex justify-between items-start z-30 pointer-events-none transition-opacity duration-300",
           !readOnly ? "opacity-0" : "opacity-100"
         )}>
-        <div className="flex flex-col items-center bg-black/10 backdrop-blur-[2px] p-1 rounded">
+        <div className="flex flex-col items-center bg-black/20 backdrop-blur-md p-1 px-2 rounded">
           <span className="text-[10px] font-mono font-bold text-white leading-none mb-1 opacity-80">{year}</span>
           <span className="text-4xl font-serif leading-none font-bold text-white">{day}</span>
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-white mt-1 border-t border-white/40 pt-1">{month}</span>
@@ -88,17 +99,23 @@ export const MagazinePreview = ({
         </div>
       </div>
 
+      {/* Tldraw Area (70%) */}
       <div className="h-[70%] min-h-[70%] w-full bg-stone-100 relative overflow-hidden z-10 border-b border-stone-100">
         {useTldraw ? (
-            <div className="w-full h-full relative" onPointerDown={(e) => !readOnly && e.stopPropagation()}>
+            <div 
+              className="w-full h-full relative" 
+              // 編集時はTldrawの操作を優先し、親のスクロールやクリックを止める
+              onPointerDown={(e) => !readOnly && e.stopPropagation()}
+            >
                 <Tldraw 
-                    key={article.id}
-                    persistenceKey={`tldraw-store-${article.id}`}
+                    store={store} // 固定したストアを渡す
                     hideUi={readOnly}
+                    readOnly={readOnly}
                     onMount={(ed) => setEditor(ed)}
                     autoFocus={false}
                 />
-                {readOnly && <div className="absolute inset-0 z-20 bg-transparent" />}
+                {/* 閲覧モード時は完全に透明な板を置いて誤入力を防ぐ */}
+                {readOnly && <div className="absolute inset-0 z-50 bg-transparent touch-none" />}
             </div>
         ) : (
             <div className="w-full h-full">
@@ -107,13 +124,14 @@ export const MagazinePreview = ({
         )}
       </div>
 
+      {/* Content Area (30%) */}
       <div className="h-[30%] min-h-[30%] p-4 relative bg-white z-20 flex flex-col justify-center">
         <div className="absolute left-4 top-4 bottom-4 w-[2px]" style={{ backgroundColor: accentColor }} />
         <div className="pl-4 overflow-hidden">
           <h2 className="font-serif text-lg font-bold italic text-stone-800 mb-1 leading-tight truncate">
             {article.title || "Untitled"}
           </h2>
-          <p className="font-serif text-[10px] leading-relaxed text-stone-600 line-clamp-3 whitespace-pre-wrap overflow-hidden">
+          <p className="font-serif text-[10px] leading-relaxed text-stone-600 line-clamp-3 whitespace-pre-wrap">
             {article.content || "No content..."}
           </p>
         </div>
@@ -141,44 +159,67 @@ export const EditorPanel = ({
       <motion.div 
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        // モバイルキーボード対策：高さを確保し、確実に上に表示されるように
         className="bg-white w-full rounded-t-[32px] shadow-2xl overflow-hidden relative z-10 h-[80vh] flex flex-col pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Editor Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-100 bg-white sticky top-0 z-20 shrink-0">
           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Editing Story</span>
-          <button onClick={onClose} className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-full active:scale-95 transition-all">
-            <span className="text-[10px] font-bold uppercase tracking-widest">Done</span>
-            <Check size={14} />
+          <button onClick={onClose} className="flex items-center gap-2 bg-stone-900 text-white px-6 py-2 rounded-full active:scale-95 transition-all shadow-lg">
+            <span className="text-[10px] font-bold uppercase tracking-widest font-bold">Done</span>
+            <Check size={16} />
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-20 bg-[#F9F8F6]">
+        {/* Editor Fields */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32 bg-[#F9F8F6]">
           <div className="space-y-2">
-            <label className="text-[9px] font-bold text-stone-400 uppercase flex items-center gap-2"><Type size={12}/> Title</label>
+            <label className="text-[10px] font-bold text-stone-400 uppercase flex items-center gap-2 tracking-widest"><Type size={12}/> Title</label>
             <input 
               type="text" 
               value={article.title || ""} 
               onChange={(e) => onChange({ ...article, title: e.target.value })}
-              className="w-full bg-transparent text-xl font-serif font-bold text-stone-800 border-b border-stone-200 focus:border-stone-800 focus:outline-none py-2" 
+              className="w-full bg-transparent text-2xl font-serif font-bold text-stone-800 border-b border-stone-200 focus:border-stone-800 focus:outline-none py-2 transition-colors" 
+              placeholder="Title..."
             />
           </div>
+          
           <div className="space-y-2">
-            <label className="text-[9px] font-bold text-stone-400 uppercase flex items-center gap-2"><PenTool size={12}/> Story</label>
+            <label className="text-[10px] font-bold text-stone-400 uppercase flex items-center gap-2 tracking-widest"><PenTool size={12}/> Story</label>
             <textarea 
               value={article.content || ""} 
               onChange={(e) => onChange({ ...article, content: e.target.value })}
-              className="w-full h-40 bg-white rounded-xl p-4 text-sm font-serif leading-relaxed text-stone-700 shadow-sm border-none resize-none" 
+              className="w-full h-48 bg-white rounded-2xl p-5 text-base font-serif leading-relaxed text-stone-700 shadow-sm border-none resize-none focus:ring-2 focus:ring-stone-200 transition-all" 
+              placeholder="Write your story..."
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4 pb-10">
-            <div className="p-4 bg-white rounded-xl shadow-sm space-y-2">
-              <label className="text-[9px] font-bold text-stone-400 uppercase flex items-center gap-2"><Palette size={12}/> Color</label>
-              <input type="color" value={article.color || "#000000"} onChange={(e) => onChange({ ...article, color: e.target.value })} className="w-full h-8 cursor-pointer"/>
+            <div className="p-5 bg-white rounded-2xl shadow-sm space-y-3">
+              <label className="text-[10px] font-bold text-stone-400 uppercase flex items-center gap-2 tracking-widest"><Palette size={12}/> Color</label>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full border border-stone-100 shadow-inner" style={{ backgroundColor: article.color || "#000000" }} />
+                <input 
+                  type="color" 
+                  value={article.color || "#000000"} 
+                  onChange={(e) => onChange({ ...article, color: e.target.value })} 
+                  className="flex-1 h-8 cursor-pointer opacity-0 absolute w-10"
+                />
+                <span className="text-xs font-mono text-stone-500 uppercase">{article.color || "#000000"}</span>
+              </div>
             </div>
-            <div className="p-4 bg-white rounded-xl shadow-sm space-y-2">
-              <label className="text-[9px] font-bold text-stone-400 uppercase flex items-center gap-2"><Star size={12}/> Rating</label>
-              <input type="range" min="0" max="100" value={article.rating || 0} onChange={(e) => onChange({ ...article, rating: parseInt(e.target.value) })} className="w-full h-8 accent-stone-800"/>
+            
+            <div className="p-5 bg-white rounded-2xl shadow-sm space-y-3">
+              <label className="text-[10px] font-bold text-stone-400 uppercase flex items-center gap-2 tracking-widest"><Star size={12}/> Rating</label>
+              <div className="flex flex-col gap-2">
+                <input 
+                  type="range" min="0" max="100" 
+                  value={article.rating || 0} 
+                  onChange={(e) => onChange({ ...article, rating: parseInt(e.target.value) })} 
+                  className="w-full h-2 bg-stone-100 rounded-lg appearance-none cursor-pointer accent-stone-800 shadow-inner"
+                />
+                <span className="text-right text-xs font-mono font-bold text-stone-800">{article.rating}%</span>
+              </div>
             </div>
           </div>
         </div>

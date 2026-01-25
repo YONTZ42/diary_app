@@ -123,29 +123,20 @@ const MagazineCover = ({ coverUrl, title, date, verticalText, subHeading }: { co
 
 // --- 4. Main Page Component (Issue Preview) ---
 
-const IssueHeroSection = ({ 
-    issue, 
-    onArticleClick 
-}: { 
-    issue: IssueData; 
-    onArticleClick: (article: Article) => void;
-}) => {
+const IssueHeroSection = ({ issue, onArticleClick }: { issue: IssueData; onArticleClick: (article: Article) => void; }) => {
     return (
         <div className="w-full h-full overflow-x-auto hide-scroll flex items-center snap-x snap-mandatory pt-20 pb-20 px-4 md:px-0">
-            <div className="w-full h-full shrink-0 flex items-center justify-center px-4 md:px-8 snap-center">
-                <MagazineCover 
-                    coverUrl={issue.cover}
-                    title={issue.title}
-                    date={issue.date}
-                    verticalText={issue.verticalText}
-                    subHeading={issue.subHeading}
-                />
+            {/* 静的な要素にも個別の key を付与 */}
+            <div key="cover-section" className="w-full h-full shrink-0 flex items-center justify-center px-4 md:px-8 snap-center">
+                <MagazineCover {...issue} coverUrl={issue.cover} />
             </div>
-            <div className="shrink-0 w-16 h-full flex flex-col justify-center items-center opacity-30 snap-align-none">
+            
+            <div key="spacer-divider" className="shrink-0 w-16 h-full flex flex-col justify-center items-center opacity-30 snap-align-none">
                 <div className="w-[1px] h-32 bg-current mb-4"></div>
                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] -rotate-90 whitespace-nowrap">Issue Contents</span>
                 <div className="w-[1px] h-32 bg-current mt-4"></div>
             </div>
+
             {issue.articles.map((article) => (
                 <div key={article.id} className="shrink-0 h-full flex items-center px-6 snap-center">
                     <MagazinePreview 
@@ -156,7 +147,8 @@ const IssueHeroSection = ({
                     />
                 </div>
             ))}
-            <div className="shrink-0 w-20"></div>
+            
+            <div key="end-spacer" className="shrink-0 w-20"></div>
         </div>
     );
 };
@@ -222,14 +214,7 @@ export default function IssuePreviewPage() {
 
     return (
         <div className="relative w-full h-screen overflow-hidden font-sans bg-slate-900 text-slate-100">
-            <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&family=Inter:wght@300;400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,500&display=swap');
-                .font-serif { font-family: 'Shippori Mincho', serif; }
-                .font-mag { font-family: 'Cormorant Garamond', serif; }
-                .drop-cap::first-letter { float: left; font-size: 3.5rem; line-height: 0.8; padding-right: 0.5rem; padding-top: 0.2rem; font-family: 'Cormorant Garamond', serif; font-weight: 700; }
-                .hide-scroll::-webkit-scrollbar { display: none; }
-                .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
+
             
             {/* Top Navigation */}
             <div className="fixed top-0 left-0 w-full z-50 pointer-events-none bg-gradient-to-b from-black/60 via-black/30 to-transparent pb-8">
@@ -241,59 +226,35 @@ export default function IssuePreviewPage() {
                 </nav>
                 <div className="px-4 pointer-events-auto flex items-start gap-4 overflow-x-auto no-scrollbar snap-x pr-4">
                     {ISSUES.map((issue) => (
-                        <div key={issue.id} onClick={() => setCurrentIssue(issue)} className={clsx("shrink-0 w-16 aspect-[2/3] rounded border overflow-hidden relative snap-start shadow-lg cursor-pointer transition-all duration-300", currentIssue.id === issue.id ? "opacity-100 scale-100 border-white shadow-xl ring-1 ring-white/50" : "opacity-40 scale-95 border-white/30 hover:opacity-70")}>
+                        <div key={issue.id} onClick={() => setCurrentIssue(issue)} className={clsx("shrink-0 w-16 aspect-[2/3] transition-all", currentIssue.id === issue.id ? "opacity-100 scale-100" : "opacity-40 scale-95")}>
                             <img src={issue.cover} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute bottom-0 w-full p-1 bg-gradient-to-t from-black/90 to-transparent"><span className="block text-[6px] text-white font-bold tracking-widest uppercase text-center">{issue.date.split(' ')[0]}</span></div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Main Scroll Container */}
-            <div ref={scrollRef} className={clsx("w-full h-full overflow-y-auto hide-scroll relative transition-colors duration-700", currentIssue.theme.bg, currentIssue.theme.text)}>
-                
-                {/* Hero Layer */}
-                <motion.div style={{ opacity: heroOpacity, scale: heroScale, filter: `blur(${heroBlur})` }} className="sticky top-0 h-screen w-full z-0 overflow-hidden">
-                    <IssueHeroSection 
-                        issue={currentIssue} 
-                        onArticleClick={(article) => { setSelectedArticle(article); setEditMode('none'); }} 
-                    />
+            <div ref={scrollRef} className={clsx("w-full h-full overflow-y-auto hide-scroll", currentIssue.theme.bg)}>
+                <motion.div style={{ opacity: heroOpacity }} className="sticky top-0 h-screen w-full z-0 overflow-hidden">
+                    <IssueHeroSection issue={currentIssue} onArticleClick={(article) => { setSelectedArticle(article); setEditMode('none'); }} />
                 </motion.div>
-
-                {/* Article Layer */}
                 <div className="relative z-10 pb-32 mt-[80vh]">
                     <ArticleBody issue={currentIssue} />
                 </div>
             </div>
 
-            {/* Expanded Preview Modal */}
+            {/* --- ここが重要: AnimatePresence の修正 --- */}
             <AnimatePresence>
                 {selectedArticle && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 pointer-events-auto bg-black/60 backdrop-blur-sm">
+                    <div key="modal-portal" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div key="modal-overlay" className="absolute inset-0" onClick={closeAll} />
                         
-                        {/* 背景クリックで閉じる (描画モード中は誤操作防止のため無効にするか検討。今回は有効のまま) */}
-                        <div className="absolute inset-0" onClick={closeAll} />
-
                         <motion.div 
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-                            animate={{ opacity: 1, scale: 1, y: 0 }} 
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            // テキスト編集時はパネルにスペースを譲るため少し上に移動
-                            style={{ 
-                                y: editMode === 'text' ? -40 : 0, 
-                                transition: "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)"
-                            }}
-                            className="relative w-full max-w-[400px] aspect-[3/5] md:aspect-[3/4] shadow-2xl"
+                            key={`modal-content-${selectedArticle.id}`} // 記事ごとにユニークなKey
+                            initial={{ opacity: 0, scale: 0.9 }} 
+                            animate={{ opacity: 1, scale: 1, y: editMode === 'text' ? -100 : 0 }} 
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="relative w-full max-w-[400px] aspect-[3/4] shadow-2xl"
                         >
-                            {/* 閉じるボタン */}
-                             <button onClick={closeAll} className="absolute -top-12 right-0 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors z-50">
-                                <X size={20}/>
-                             </button>
-
-                             {/* プレビュー本体: 
-                                拡大時は常にTldrawCanvasを表示。
-                                編集モードが 'drawing' のときだけ readOnly=false にして操作可能にする。
-                             */}
                              <MagazinePreview 
                                 article={selectedArticle} 
                                 useTldraw={true}
@@ -301,48 +262,25 @@ export default function IssuePreviewPage() {
                                 styleClass="w-full h-full" 
                             />
                              
-                             {/* 編集アクションボタン (何も編集モードに入っていないときのみ表示) */}
                              {editMode === 'none' && (
-                                 <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
-                                     <motion.button
-                                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                        onClick={() => setEditMode('drawing')}
-                                        className="bg-white text-stone-900 w-12 h-12 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                                        title="Draw on image"
-                                     >
-                                        <Pencil size={18} />
-                                     </motion.button>
-                                     <motion.button
-                                        initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                        onClick={() => setEditMode('text')}
-                                        className="bg-stone-900 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                                        title="Edit text"
-                                     >
-                                        <Type size={20} />
-                                     </motion.button>
+                                 <div key="action-buttons" className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
+                                     <button key="btn-draw" onClick={() => setEditMode('drawing')} className="bg-white text-stone-900 w-12 h-12 rounded-full flex items-center justify-center"><Pencil size={18} /></button>
+                                     <button key="btn-text" onClick={() => setEditMode('text')} className="bg-stone-900 text-white w-14 h-14 rounded-full flex items-center justify-center"><Type size={20} /></button>
                                  </div>
                              )}
 
-                             {/* 描画モード中の完了ボタン (オーバーレイがないので直接画像の上に置く) */}
                              {editMode === 'drawing' && (
-                                 <motion.button
-                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    onClick={() => setEditMode('none')}
-                                    className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 transition-colors"
-                                 >
-                                     <Check size={24} />
-                                 </motion.button>
+                                 <button key="btn-done-draw" onClick={() => setEditMode('none')} className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center"><Check size={24} /></button>
                              )}
-
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
 
-            {/* Editor Panel (Text Edit Mode) */}
             <AnimatePresence>
                 {editMode === 'text' && selectedArticle && (
                     <EditorPanel 
+                        key="text-editor-panel" // Keyを追加
                         article={selectedArticle} 
                         onChange={handleArticleUpdate} 
                         onClose={() => setEditMode('none')} 
