@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { 
   PenTool, Check, Type, Palette, Star, 
@@ -58,8 +58,7 @@ const formatDate = (timestamp: number) => {
 };
 
 // --- コンポーネント ---
-
-export const MagazinePreview = ({ 
+export const MagazinePreview = memo(({ 
     article, 
     onClick, 
     styleClass = "", 
@@ -166,8 +165,11 @@ export const MagazinePreview = ({
         </div>
       </div>
     </div>
-  );
-};
+  );},
+(prev, next)=>{return prev.article.id === next.article.id && 
+         prev.readOnly === next.readOnly &&
+         prev.article.title === next.article.title;})
+
 
 export const EditorPanel = ({
   article,

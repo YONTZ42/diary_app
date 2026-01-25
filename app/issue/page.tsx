@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Share2, Sparkles, PenTool, X, Check, Type, Palette, Star, Image as ImageIcon, Pencil } from "lucide-react";
 import clsx from "clsx";
