@@ -116,7 +116,7 @@ const DrawingModal = ({
         </div>
         
         {/* Tldraw キャンバス */}
-        <div className="flex-1 relative bg-[#fcfaf8]">
+        <div className="flex-1 relative bg-[#fcfaf8] touch-none" >
           <TldrawEditor 
             onMount={handleMount}
             hideUi={false} 

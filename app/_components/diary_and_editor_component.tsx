@@ -151,7 +151,7 @@ export const MagazinePreview = memo(({
       {/* ★ ここに onImageClick を設定し、カーソルをポインターに */}
       <div 
         onClick={onImageClick}
-        className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100 cursor-pointer group/image"
+        className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100 cursor-pointer group/image touch none"
       >
         {/* ホバー時に「編集」アイコンを出すなどの演出も可能 */}
         <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/5 z-20 transition-colors" />
