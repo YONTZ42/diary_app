@@ -15,6 +15,8 @@ const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
   loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" /> // ロード中の表示
 });
 
+
+
 import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
 import "tldraw/tldraw.css";
 
