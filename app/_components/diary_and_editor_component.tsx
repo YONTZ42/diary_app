@@ -10,8 +10,9 @@ import clsx from "clsx";
 import dynamic from "next/dynamic";
 
 // Tldraw本体をSSR無効でインポート
-const Tldraw = dynamic(async () => (await import("tldraw")).Tldraw, {
+const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
   ssr: false,
+  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" /> // ロード中の表示
 });
 
 import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
@@ -108,6 +109,7 @@ export const MagazinePreview = ({
               onPointerDown={(e) => !readOnly && e.stopPropagation()}
             >
                 <Tldraw 
+                    assetUrls={undefined}
                     store={store}
                     hideUi={readOnly}
                     onMount={(ed) => {

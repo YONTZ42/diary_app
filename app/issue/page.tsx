@@ -275,6 +275,22 @@ export default function IssuePreviewPage() {
                             />
                              
                              {/* ... (ボタン類) */}
+                            {editMode === 'none' && (
+                                <div className="absolute bottom-6 right-6 z-40 flex flex-col gap-3">
+                                <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => setEditMode('drawing')} className="bg-white text-stone-900 w-12 h-12 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform">
+                                    <Sparkles size={18} />
+                                </motion.button>
+                                <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => setEditMode('text')} className="bg-stone-900 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform">
+                                    <PenTool size={20} />
+                                </motion.button>
+                                </div>
+                            )}
+                            {editMode === 'drawing' && (
+                                <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} onClick={() => setEditMode('none')} className="absolute bottom-6 right-6 z-50 bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 transition-colors">
+                                <Check size={24} />
+                                </motion.button>
+                            )}
+                             
                         </motion.div>
                     </motion.div>
                 )}
