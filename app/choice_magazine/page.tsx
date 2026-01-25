@@ -333,10 +333,11 @@ export default function MagazineArchivePage() {
                                 <span className="text-[10px] [writing-mode:vertical-rl] font-bold tracking-widest uppercase">Create New</span>
                             </button>
 
-                            {specialIssues.map(issue => (
-                                <Link href="/issue">
-                                <SpecialIssueCard key={issue.id} issue={issue} />
-                                </Link>
+                    {specialIssues.map(issue => (
+                        <Link href="/issue" key={issue.id}> {/* Link側にkeyを移動 */}
+                            <SpecialIssueCard issue={issue} />
+                        </Link>
+
                             ))}
                         </div>
                     </div>
