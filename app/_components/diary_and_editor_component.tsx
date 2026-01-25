@@ -110,7 +110,6 @@ export const MagazinePreview = ({
                 <Tldraw 
                     store={store} // 固定したストアを渡す
                     hideUi={readOnly}
-                    readOnly={readOnly}
                     onMount={(ed) => setEditor(ed)}
                     autoFocus={false}
                 />
