@@ -8,17 +8,34 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
+import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
+import "tldraw/tldraw.css";
 
 // Tldraw本体をSSR無効でインポート
 const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" /> // ロード中の表示
+  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" />
 });
 
+// --- 定数・ヘルパー ---
 
+/**
+ * 日本語翻訳の不足分を補い、警告を消すための定義
+ */
+const TLDRAW_MESSAGES = {
+  ja: {
+    'style-panel.fill-style.lined-fill': '斜線',
+    'fill-style.lined-fill': '斜線',
+  },
+};
 
-import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
-import "tldraw/tldraw.css";
+/**
+ * リスト表示用の軽量設定
+ * UIを非表示にし、翻訳エラーを防ぐ
+ */
+const PREVIEW_OVERRIDES = {
+  translations: TLDRAW_MESSAGES,
+};
 
 export type Article = {
   id: string;
@@ -40,6 +57,8 @@ const formatDate = (timestamp: number) => {
   };
 };
 
+// --- コンポーネント ---
+
 export const MagazinePreview = ({ 
     article, 
     onClick, 
@@ -57,22 +76,22 @@ export const MagazinePreview = ({
   const [editor, setEditor] = useState<Editor | null>(null);
   const { year, month, day } = formatDate(article.date);
 
-  // 【重要】Vercel/本番環境で消えるのを防ぐため、Storeをメモ化して固定する
-  // persistenceKeyは使わず、メモリ内で管理することで同期エラーによる消失を防ぐ
+  // Storeの初期化をより安定させる
   const store = useMemo(() => {
-    return createTLStore({ shapeUtils: defaultShapeUtils });
+    const newStore = createTLStore({ shapeUtils: defaultShapeUtils });
+    // 必要であればここで初期データをロード
+    return newStore;
   }, [article.id]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !readOnly) return;
     
-    // プレビュー表示時に、描画内容が中央に収まるように調整
-    if (readOnly) {
-      const timer = setTimeout(() => {
-        editor.zoomToFit({ animation: { duration: 0 } });
-      }, 500);
-      return () => clearTimeout(timer);
-    }
+    // 描画範囲にズームを合わせる（少し遅延させて確実に行う）
+    const timer = setTimeout(() => {
+      editor.zoomToFit({ animation: { duration: 0 } });
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, [editor, readOnly]);
 
   return (
@@ -103,28 +122,29 @@ export const MagazinePreview = ({
       </div>
 
       {/* Tldraw Area (70%) */}
-      <div className="h-[70%] min-h-[70%] w-full bg-stone-100 relative overflow-hidden z-10 border-b border-stone-100">
+      <div className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100">
         {useTldraw ? (
             <div 
-              key={`tldraw-wrapper-${article.id}-${readOnly}`} // keyを付けて確実に再描画させる
+              key={`tldraw-wrapper-${article.id}`} 
               className="w-full h-full relative" 
-              onPointerDown={(e) => !readOnly && e.stopPropagation()}
             >
                 <Tldraw 
-                    assetUrls={undefined}
                     store={store}
                     hideUi={readOnly}
+                    // クラッシュ防止：リスト表示時はUI要素を徹底的に削削る
+                    overrides={PREVIEW_OVERRIDES}
                     onMount={(ed) => {
                         setEditor(ed);
-                        // readOnlyが変化した際などに確実にフォーカスを制御
-                        if (readOnly) ed.blur();
+                        if (readOnly) {
+                          ed.updateInstanceState({ isReadonly: true });
+                          ed.blur();
+                        }
                     }}
-                    // Vercelでのクラッシュを防ぐための設定
-                    autoFocus={!readOnly}
+                    autoFocus={false}
                     inferDarkMode={false}
                 />
-                {/* 閲覧モード時は完全に透明な板を置いて入力を遮断 */}
-                {readOnly && <div className="absolute inset-0 z-30 bg-transparent touch-none" />}
+                {/* 閲覧モード時は完全に透明な板を置いてイベント干渉を防ぐ */}
+                {readOnly && <div className="absolute inset-0 z-[100] bg-transparent touch-none cursor-pointer" />}
             </div>
         ) : (
             <div className="w-full h-full">
@@ -132,7 +152,6 @@ export const MagazinePreview = ({
             </div>
         )}
       </div>
-
 
       {/* Content Area (30%) */}
       <div className="h-[30%] min-h-[30%] p-4 relative bg-white z-20 flex flex-col justify-center">
@@ -159,6 +178,11 @@ export const EditorPanel = ({
   onChange: (updated: Article) => void;
   onClose: () => void;
 }) => {
+  // 編集パネル側でも翻訳エラーを防ぐ
+  const editorOverrides = useMemo(() => ({
+    translations: TLDRAW_MESSAGES
+  }), []);
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
       <motion.div 
@@ -176,7 +200,7 @@ export const EditorPanel = ({
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-100 bg-white sticky top-0 z-20 shrink-0">
           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Editing Story</span>
           <button onClick={onClose} className="flex items-center gap-2 bg-stone-900 text-white px-6 py-2 rounded-full active:scale-95 transition-all shadow-lg">
-            <span className="text-[10px] font-bold uppercase tracking-widest font-bold">Done</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Done</span>
             <Check size={16} />
           </button>
         </div>
