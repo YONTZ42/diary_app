@@ -143,7 +143,7 @@ const IssueHeroSection = ({ issue, onArticleClick }: { issue: IssueData; onArtic
                         article={article}
                         useTldraw={true}
                         styleClass="w-80 md:w-96 aspect-[9/16] cursor-pointer hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
-                        onClick={() => onArticleClick(article)}
+                        onContentClick={() => onArticleClick(article)}
                     />
                 </div>
             ))}

@@ -16,7 +16,7 @@ export default function RootLayout({
 
         {children}
 
-        <FooterNav />
+        
       </body>
     </html>
   );

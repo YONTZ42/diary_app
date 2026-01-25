@@ -8,8 +8,24 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { Editor, createTLStore, defaultShapeUtils } from "tldraw";
+import { Editor, createTLStore, defaultShapeUtils, loadSnapshot } from "tldraw";
 import "tldraw/tldraw.css";
+
+const UI_OVERRIDES = {
+  translations: {
+    ja: {
+      'style-panel.fill-style.lined-fill': '斜線',
+      'fill-style.lined-fill': '斜線',
+      // その他、不足しているキーがあればここに追加
+    },
+  },
+};
+
+const PAGE_BOUNDS = { x: 0, y: 0, w: 600, h: 800 };
+
+
+
+
 
 // Tldraw本体をSSR無効でインポート
 const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
@@ -57,56 +73,67 @@ const formatDate = (timestamp: number) => {
   };
 };
 
-// --- コンポーネント ---
+
+// ... (前半のインポートやArticle型定義などはそのまま) ...
+
+// ★ 変更点: propsに onImageClick と onContentClick を追加
 export const MagazinePreview = memo(({ 
     article, 
-    onClick, 
+    // onClick,  <-- 削除 (または互換性のために残しても良いですが、今回は分離します)
+    onImageClick,   // ★ 追加: 画像クリック時
+    onContentClick, // ★ 追加: テキストクリック時
     styleClass = "", 
     useTldraw = true, 
-    readOnly = true 
+    readOnly = true,
+    snapshot = null
 }: { 
     article: Article; 
-    onClick?: () => void; 
+    // onClick?: () => void; <-- 削除
+    onImageClick?: () => void;   // ★ 追加
+    onContentClick?: () => void; // ★ 追加
     styleClass?: string;
     useTldraw?: boolean;
     readOnly?: boolean;
+    snapshot?: any;
 }) => {
   const accentColor = article.color || "#000000";
   const [editor, setEditor] = useState<Editor | null>(null);
   const { year, month, day } = formatDate(article.date);
 
-  // Storeの初期化をより安定させる
+  // Storeの初期化 (前回の修正含む)
   const store = useMemo(() => {
     const newStore = createTLStore({ shapeUtils: defaultShapeUtils });
-    // 必要であればここで初期データをロード
+    if (snapshot) {
+      loadSnapshot(newStore, snapshot);
+    }
     return newStore;
-  }, [article.id]);
+  }, [article.id, snapshot]); // snapshotが変わったら再生成
 
   useEffect(() => {
     if (!editor || !readOnly) return;
-    
-    // 描画範囲にズームを合わせる（少し遅延させて確実に行う）
     const timer = setTimeout(() => {
-      editor.zoomToFit({ animation: { duration: 0 } });
-    }, 300);
+      // 描かれた中身に関わらず、常に 0,0 から 600x800 の範囲を表示する
+      editor.zoomToBounds(PAGE_BOUNDS, { animation: { duration: 0 }, inset: 0 });
+    }, 100); // 少し待ち時間を短縮
     
     return () => clearTimeout(timer);
-  }, [editor, readOnly]);
+  }, [editor, readOnly, snapshot]); // snapshotが変わった時も再調整
+
 
   return (
     <div 
-        onClick={onClick}
         className={clsx(
             "relative bg-white shadow-xl flex flex-col overflow-hidden rounded-[2px] isolate transition-all duration-300",
             styleClass || "aspect-[3/4]"
         )}
     >
-      {/* Header Overlay */}
+      {/* Header Overlay (日付など) - クリックを透過させるため pointer-events-none はそのまま */}
       <div className={clsx(
           "absolute top-0 w-full p-4 flex justify-between items-start z-30 pointer-events-none transition-opacity duration-300",
           !readOnly ? "opacity-0" : "opacity-100"
         )}>
-        <div className="flex flex-col items-center bg-black/20 backdrop-blur-md p-1 px-2 rounded">
+        {/* ... (日付表示の中身は変更なし) ... */}
+         <div className="flex flex-col items-center bg-black/20 backdrop-blur-md p-1 px-2 rounded">
           <span className="text-[10px] font-mono font-bold text-white leading-none mb-1 opacity-80">{year}</span>
           <span className="text-4xl font-serif leading-none font-bold text-white">{day}</span>
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-white mt-1 border-t border-white/40 pt-1">{month}</span>
@@ -120,8 +147,15 @@ export const MagazinePreview = memo(({
         </div>
       </div>
 
-      {/* Tldraw Area (70%) */}
-      <div className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100">
+      {/* --- 上部: Tldraw Area (70%) --- */}
+      {/* ★ ここに onImageClick を設定し、カーソルをポインターに */}
+      <div 
+        onClick={onImageClick}
+        className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100 cursor-pointer group/image"
+      >
+        {/* ホバー時に「編集」アイコンを出すなどの演出も可能 */}
+        <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/5 z-20 transition-colors" />
+
         {useTldraw ? (
             <div 
               key={`tldraw-wrapper-${article.id}`} 
@@ -130,7 +164,6 @@ export const MagazinePreview = memo(({
                 <Tldraw 
                     store={store}
                     hideUi={readOnly}
-                    // クラッシュ防止：リスト表示時はUI要素を徹底的に削削る
                     overrides={PREVIEW_OVERRIDES}
                     onMount={(ed) => {
                         setEditor(ed);
@@ -142,8 +175,8 @@ export const MagazinePreview = memo(({
                     autoFocus={false}
                     inferDarkMode={false}
                 />
-                {/* 閲覧モード時は完全に透明な板を置いてイベント干渉を防ぐ */}
-                {readOnly && <div className="absolute inset-0 z-[100] bg-transparent touch-none cursor-pointer" />}
+                {/* 閲覧モード時のクリックガード */}
+                {readOnly && <div className="absolute inset-0 z-[100] bg-transparent touch-none" />}
             </div>
         ) : (
             <div className="w-full h-full">
@@ -152,8 +185,12 @@ export const MagazinePreview = memo(({
         )}
       </div>
 
-      {/* Content Area (30%) */}
-      <div className="h-[30%] min-h-[30%] p-4 relative bg-white z-20 flex flex-col justify-center">
+      {/* --- 下部: Content Area (30%) --- */}
+      {/* ★ ここに onContentClick を設定 */}
+      <div 
+        onClick={onContentClick}
+        className="h-[30%] min-h-[30%] p-4 relative bg-white z-20 flex flex-col justify-center cursor-pointer hover:bg-stone-50 transition-colors"
+      >
         <div className="absolute left-4 top-4 bottom-4 w-[2px]" style={{ backgroundColor: accentColor }} />
         <div className="pl-4 overflow-hidden">
           <h2 className="font-serif text-lg font-bold italic text-stone-800 mb-1 leading-tight truncate">
@@ -168,8 +205,10 @@ export const MagazinePreview = memo(({
   );},
 (prev, next)=>{return prev.article.id === next.article.id && 
          prev.readOnly === next.readOnly &&
-         prev.article.title === next.article.title;})
+         prev.article.title === next.article.title && 
+         prev.snapshot === next.snapshot;}) // snapshot比較を追加
 
+// ... EditorPanel はそのまま ...
 
 export const EditorPanel = ({
   article,
