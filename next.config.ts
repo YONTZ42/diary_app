@@ -1,8 +1,29 @@
 import type { NextConfig } from "next";
 
+const csp = [
+  "default-src 'self'",
+  "script-src 'self'",           // まずは最小から
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' https:",
+  "object-src 'none'",
+  "base-uri 'self'",
+].join("; ");
+
 const nextConfig: NextConfig = {
-  // tldraw をサーバー側でトランスパイル（変換）対象に含める
   transpilePackages: ["tldraw", "@tldraw/tldraw", "@tldraw/validate"],
+
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          // ★ここが Report-Only
+          { key: "Content-Security-Policy-Report-Only", value: csp },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
