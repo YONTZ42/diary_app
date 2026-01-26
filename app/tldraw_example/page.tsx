@@ -1,11 +1,18 @@
 'use client'
-import dynamic from "next/dynamic";
-const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
-  ssr: false,
-  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" />
-});
 
+import dynamic from 'next/dynamic'
 import 'tldraw/tldraw.css'
+
+// tldrawをSSR（サーバーサイドレンダリング）から除外して読み込む
+const Tldraw = dynamic(async () => {
+  const { Tldraw } = await import('tldraw')
+  return Tldraw
+}, { 
+  ssr: false,
+  // 読み込み中に表示する内容（任意）
+  loading: () => <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+})
+
 
 export default function SimpleEditor() {
   return (
