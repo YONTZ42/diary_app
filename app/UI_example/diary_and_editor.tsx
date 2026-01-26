@@ -41,6 +41,8 @@ const Excalidraw = dynamic(
   }
 );
 
+
+
 // =====================
 // Frame settings
 // =====================
@@ -191,6 +193,23 @@ export const DiaryPreview = memo(
       if (!api) return;
       fitToFrame(api, initialData.elements);
       // eslint-disable-next-line react-hooks/exhaustive-deps
+        const base = toExcalidrawInitialData(scene);
+        const withFrame = ensureFrame(base.elements);
+
+        // ExcalidrawはinitialDataでは更新されないので、updateSceneで差し替える
+        api.updateScene?.({
+          elements: withFrame.elements,
+          appState: {
+            ...base.appState,
+            // viewModeプレビュー向け：ズレ防止のためここも固定しておくと安定
+            collaborators: new Map(),
+          },
+          files: base.files,
+        });
+
+        // 枠へフィット（部分表示の解消）
+        fitToFrame(api, withFrame.elements);
+      
     }, [api, initialData.elements]);
 
     return (
@@ -358,14 +377,7 @@ export const EditorDrawPanel = ({
         onClick={onClose}
       />
 
-      <div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="bg-white w-full rounded-t-[32px] shadow-2xl overflow-hidden relative z-10 h-[80vh] flex flex-col pointer-events-auto overscroll-contain"
-        onClick={(e) => e.stopPropagation()}
-      >
+
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-100 bg-white sticky top-0 z-20 shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
@@ -440,7 +452,7 @@ export const EditorDrawPanel = ({
           />
         </div>
       </div>
-    </div>
+
   );
 };
 
