@@ -1,6 +1,10 @@
 'use client'
+import dynamic from "next/dynamic";
+const Tldraw = dynamic(() => import('tldraw').then((mod) => mod.Tldraw), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-stone-100 animate-pulse" />
+});
 
-import { Tldraw } from 'tldraw'
 import 'tldraw/tldraw.css'
 
 export default function SimpleEditor() {
