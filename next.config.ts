@@ -8,6 +8,7 @@ const csp = [
   "connect-src 'self' https:",
   "object-src 'none'",
   "base-uri 'self'",
+  
 ].join("; ");
 
 const nextConfig: NextConfig = {
