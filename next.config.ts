@@ -12,8 +12,11 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["tldraw", "@tldraw/tldraw", "@tldraw/validate"],
-
+  transpilePackages: ["tldraw"],
+  experimental: {
+    // サーバーコンポーネントとの相性を高める設定
+    serverComponentsExternalPackages: ['tldraw'], 
+  },
   async headers() {
     return [
       {
