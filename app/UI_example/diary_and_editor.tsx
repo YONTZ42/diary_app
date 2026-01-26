@@ -1,10 +1,10 @@
 "use client";
 
-import React, { memo, useMemo, useRef } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { Check, Type, PenTool, Palette, Star } from "lucide-react";
+import { Check, Grid3X3, Type, PenTool, Palette, Star } from "lucide-react";
 
 /**
  * Article（あなた指定）
@@ -21,9 +21,7 @@ export type Article = {
 };
 
 /**
- * ローカル保存/DB保存向けの “安全な” シーン形式
- * - Excalidraw の appState は丸ごと保存しない（Map等が壊れてクラッシュ要因）
- * - 必要な最低限だけ残す
+ * ローカル保存/DB保存向けの安全なシーン形式
  */
 export type PersistedScene = {
   elements: readonly any[];
@@ -32,15 +30,6 @@ export type PersistedScene = {
     viewBackgroundColor?: string;
   };
 } | null;
-
-/**
- * Excalidraw が受け取れる initialData 形式（表示用）
- */
-type ExcalidrawInitialData = {
-  elements: readonly any[];
-  files?: any;
-  appState: any;
-};
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then((m) => m.Excalidraw),
@@ -51,6 +40,14 @@ const Excalidraw = dynamic(
     ),
   }
 );
+
+// =====================
+// Frame settings
+// =====================
+const FRAME_ID = "__DIARY_PREVIEW_FRAME__";
+// 3:4 に合わせる（DiaryPreview aspect 3/4）
+const FRAME_W = 900;
+const FRAME_H = 1200;
 
 // =====================
 // Helpers
@@ -65,10 +62,6 @@ const formatDate = (timestamp: number) => {
   };
 };
 
-/**
- * 保存向けに “危険なappState” を捨てる
- * - collaborators等は Map を含み、JSONで壊れて実行時エラーになりやすい
- */
 export function sanitizeSceneForStorage(raw: any): PersistedScene {
   if (!raw) return null;
   return {
@@ -80,41 +73,91 @@ export function sanitizeSceneForStorage(raw: any): PersistedScene {
   };
 }
 
-/**
- * 何が渡ってきても “保存形式” に寄せる
- */
-export function normalizeScene(input: any): PersistedScene {
-  if (!input) return null;
-
-  // すでに PersistedScene っぽい
-  if (Array.isArray(input.elements)) {
-    // persisted か raw か判別が難しいので、一旦 sanitize して安全側に倒す
-    return sanitizeSceneForStorage(input);
-  }
-
-  // unknown
-  return null;
-}
-
-/**
- * Excalidrawに渡す直前に、必要なフィールドを補完
- * - collaborators は Map を期待される（forEachが呼ばれる実装がある）
- * - JSON復元だと {} になりがちなので必ず new Map()
- */
-export function toExcalidrawInitialData(scene: PersistedScene): ExcalidrawInitialData {
+function toExcalidrawInitialData(scene: PersistedScene) {
   return {
     elements: scene?.elements ?? [],
     files: scene?.files ?? {},
     appState: {
       viewBackgroundColor: scene?.appState?.viewBackgroundColor ?? "#fcfaf8",
-      collaborators: new Map(), // 重要：Runtime TypeError 対策
+      // collaborators は Map を期待されるので必ず Map
+      collaborators: new Map(),
     },
   };
 }
 
+function createFrameElement(): any {
+  const now = Date.now();
+  return {
+    type: "rectangle",
+    id: FRAME_ID,
+    x: 0,
+    y: 0,
+    width: FRAME_W,
+    height: FRAME_H,
+    angle: 0,
+    strokeColor: "#111827",
+    backgroundColor: "transparent",
+    fillStyle: "solid",
+    strokeWidth: 2,
+    strokeStyle: "solid",
+    roughness: 0,
+    opacity: 100,
+    seed: now % 2147483647,
+    version: 1,
+    versionNonce: (now * 7) % 2147483647,
+    isDeleted: false,
+    updated: 1,
+    groupIds: [],
+    boundElements: null,
+    locked: true,
+    link: null,
+    roundness: { type: 3, value: 16 },
+  };
+}
+
+function ensureFrame(elements: readonly any[]): { elements: readonly any[]; frame: any } {
+  const found = (elements ?? []).find((el: any) => el?.id === FRAME_ID && !el?.isDeleted);
+  if (found) {
+    // 念のため locked とサイズを維持
+    const patched = (elements ?? []).map((el: any) => {
+      if (el?.id !== FRAME_ID) return el;
+      return {
+        ...el,
+        locked: true,
+        isDeleted: false,
+        width: FRAME_W,
+        height: FRAME_H,
+        strokeWidth: 2,
+        backgroundColor: "transparent",
+      };
+    });
+    return { elements: patched, frame: found };
+  }
+  const frame = createFrameElement();
+  return { elements: [frame, ...(elements ?? [])], frame };
+}
+
+// ExcalidrawAPI を使って「枠にフィット」
+function fitToFrame(api: any, elements: readonly any[]) {
+  if (!api) return;
+  const frame = (elements ?? []).find((el: any) => el?.id === FRAME_ID && !el?.isDeleted);
+  const target = frame ? [frame] : api.getSceneElements?.() ?? undefined;
+
+  // タイミングにより top-left になることがあるので refresh + raf + timeout で堅めに
+  requestAnimationFrame(() => {
+    api.refresh?.();
+    setTimeout(() => {
+      try {
+        api.scrollToContent?.(target, { fitToContent: true });
+      } catch {
+        // ignore
+      }
+    }, 0);
+  });
+}
+
 // =====================
 // 1) DiaryPreview
-// - Excalidrawプレビュー（編集禁止） + テキスト表示
 // =====================
 
 export const DiaryPreview = memo(
@@ -126,7 +169,7 @@ export const DiaryPreview = memo(
     styleClass = "",
   }: {
     article: Article;
-    scene: PersistedScene; // ←保存形式で受け取るのが安全
+    scene: PersistedScene;
     onDrawClick?: () => void;
     onTextClick?: () => void;
     styleClass?: string;
@@ -134,9 +177,21 @@ export const DiaryPreview = memo(
     const accentColor = article.color || "#000000";
     const { year, month, day } = formatDate(article.date);
 
+    const [gridOn, setGridOn] = useState(false);
+    const [api, setApi] = useState<any>(null);
+
     const initialData = useMemo(() => {
-      return toExcalidrawInitialData(normalizeScene(scene));
+      const base = toExcalidrawInitialData(scene);
+      const withFrame = ensureFrame(base.elements);
+      return { ...base, elements: withFrame.elements };
     }, [scene]);
+
+    // 初回に「枠へフィット」して部分表示を解消
+    useEffect(() => {
+      if (!api) return;
+      fitToFrame(api, initialData.elements);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [api, initialData.elements]);
 
     return (
       <div
@@ -192,14 +247,30 @@ export const DiaryPreview = memo(
           onClick={onDrawClick}
           className="h-[70%] min-h-[70%] w-full bg-[#fcfaf8] relative overflow-hidden z-10 border-b border-stone-100 cursor-pointer group/image"
         >
-          <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/5 z-20 transition-colors" />
+          {/* grid toggle button（クリック遮断レイヤより上） */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setGridOn((v) => !v);
+            }}
+            className="absolute right-3 bottom-3 z-[200] bg-white/90 backdrop-blur border border-stone-200 shadow-sm rounded-full px-3 py-2 flex items-center gap-2 active:scale-95 transition pointer-events-auto"
+          >
+            <Grid3X3 size={14} />
+            <span className="text-[10px] font-bold tracking-widest uppercase">
+              GRID
+            </span>
+          </button>
 
-          <div className="w-full h-full relative">
+          <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/5 z-20 transition-colors " />
+
+          <div className="w-full h-full relative exca-preview">
             <Excalidraw
               initialData={initialData as any}
+              excalidrawAPI={(apiObj: any) => setApi(apiObj)}
               viewModeEnabled={true}
               zenModeEnabled={true}
-              gridModeEnabled={false}
+              gridModeEnabled={gridOn}
               theme="light"
               UIOptions={{
                 canvasActions: {
@@ -213,9 +284,8 @@ export const DiaryPreview = memo(
                 },
               }}
             />
-
-            {/* Excalidraw内部の操作を遮断して “カードクリック” に統一 */}
-            <div className="absolute inset-0 z-[100] bg-transparent touch-none" />
+            {/* 操作遮断（カードクリック優先） */}
+            <div className="absolute inset-0 z-[150] bg-transparent touch-none" />
           </div>
         </div>
 
@@ -246,12 +316,6 @@ DiaryPreview.displayName = "DiaryPreview";
 
 // =====================
 // 2) EditorDrawPanel
-// - Excalidraw部分を編集
-//
-// 重要：Maximum update depth 対策
-// - onChangeで親setStateしない
-// - panel内でrefに溜め、Doneで一括保存
-// - 親側では <EditorDrawPanel key={openDrawId} ... /> を推奨
 // =====================
 
 export const EditorDrawPanel = ({
@@ -265,12 +329,24 @@ export const EditorDrawPanel = ({
   onClose: () => void;
   accentColor?: string;
 }) => {
+  const [gridOn, setGridOn] = useState(true); // ←要望：最初から使えるように
+  const [api, setApi] = useState<any>(null);
+
   const initialData = useMemo(() => {
-    return toExcalidrawInitialData(normalizeScene(scene));
+    const base = toExcalidrawInitialData(scene);
+    const withFrame = ensureFrame(base.elements);
+    return { ...base, elements: withFrame.elements };
   }, [scene]);
 
-  // 描画中の最新状態（生データ）をここに保持。setStateしない！
+  // 描画中の最新状態（生データ）をrefに保持。setStateしない！
   const draftRef = useRef<any>(initialData);
+
+  // 開いた瞬間に必ず「枠へ戻す」＝ Scroll back to content 対策
+  useEffect(() => {
+    if (!api) return;
+    fitToFrame(api, initialData.elements);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api]);
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
@@ -282,21 +358,37 @@ export const EditorDrawPanel = ({
         onClick={onClose}
       />
 
-      <motion.div
+      <div
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="bg-white w-full rounded-t-[32px] shadow-2xl overflow-hidden relative z-10 h-[80vh] flex flex-col pointer-events-auto"
+        className="bg-white w-full rounded-t-[32px] shadow-2xl overflow-hidden relative z-10 h-[80vh] flex flex-col pointer-events-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-100 bg-white sticky top-0 z-20 shrink-0">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
-            Editing Drawing
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
+              Editing Drawing
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setGridOn((v) => !v)}
+              className="flex items-center gap-2 bg-stone-100 hover:bg-stone-200 text-stone-800 px-3 py-2 rounded-full active:scale-95 transition"
+            >
+              <Grid3X3 size={14} />
+              <span className="text-[10px] font-bold tracking-widest uppercase">
+                Grid
+              </span>
+            </button>
+          </div>
 
           <button
             onClick={() => {
+              // frameを消されても戻す
+              const ensured = ensureFrame(draftRef.current.elements ?? []);
+              draftRef.current = { ...draftRef.current, elements: ensured.elements };
               onSaveScene(sanitizeSceneForStorage(draftRef.current));
               onClose();
             }}
@@ -310,13 +402,21 @@ export const EditorDrawPanel = ({
         </div>
 
         <div className="flex-1 bg-[#F9F8F6] p-4">
-          <div className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-stone-100 bg-white">
+          <div
+            className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-stone-100 bg-white"
+            style={{
+              // モバイルで描画ジェスチャをブラウザスクロールに奪われないようにする
+              touchAction: "none",
+            }}
+          >
             <Excalidraw
               initialData={initialData as any}
+              excalidrawAPI={(apiObj: any) => setApi(apiObj)}
               theme="light"
+              gridModeEnabled={gridOn}
               onChange={(elements: any, appState: any, files: any) => {
-                // ここで setState しない！（無限更新を断つ）
-                // ただし appState.collaborators は Map を保つために補修
+                // setStateしない！（無限更新を断つ）
+                const ensured = ensureFrame(elements ?? []);
                 const safeAppState = {
                   ...appState,
                   collaborators:
@@ -324,7 +424,7 @@ export const EditorDrawPanel = ({
                       ? appState.collaborators
                       : new Map(),
                 };
-                draftRef.current = { elements, appState: safeAppState, files };
+                draftRef.current = { elements: ensured.elements, appState: safeAppState, files };
               }}
               UIOptions={{
                 canvasActions: {
@@ -339,14 +439,13 @@ export const EditorDrawPanel = ({
             style={{ backgroundColor: accentColor }}
           />
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
 
 // =====================
 // 3) EditorTextPanel
-// - テキスト部分を編集
 // =====================
 
 export const EditorTextPanel = ({

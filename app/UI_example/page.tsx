@@ -140,6 +140,8 @@ export default function DiaryPage() {
     localStorage.setItem(LS_SCENES_KEY, JSON.stringify(scenesById));
   }, [scenesById]);
 
+  
+
   const sortedArticles = useMemo(() => {
     return [...articles].sort((a, b) => b.date - a.date);
   }, [articles]);

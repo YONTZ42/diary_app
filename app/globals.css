@@ -3,6 +3,26 @@
 @tailwind components;
 @tailwind utilities;
 
+.exca-preview .excalidraw .layer-ui__wrapper,
+.exca-preview .excalidraw .App-toolbar,
+.exca-preview .excalidraw .App-menu,
+.exca-preview .excalidraw .main-menu,
+.exca-preview .excalidraw .main-menu-trigger,
+.exca-preview .excalidraw .dropdown-menu,
+.exca-preview .excalidraw .help-dialog,
+.exca-preview .excalidraw .App-bottom-bar,
+.exca-preview .excalidraw .footer,
+.exca-preview .excalidraw .footer-left,
+.exca-preview .excalidraw .footer-center,
+.exca-preview .excalidraw .footer-right,
+.exca-preview .excalidraw [class*="layer-ui__wrapper__top"],
+.exca-preview .excalidraw [class*="layer-ui__wrapper__footer"],
+.exca-preview .excalidraw [class*="layer-ui__wrapper__sidebar"],
+.exca-preview .excalidraw [class*="MobileMenu"] {
+  display: none !important;
+}
+
+
 :root {
   /* 生成り・紙の色 (Warm Off-white) */
   --background: #fafaf9; 
