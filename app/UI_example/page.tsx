@@ -1,142 +1,232 @@
 "use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Book, Calendar as CalendarIcon, Grid, Settings2, Check } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  DiaryPreview,
+  EditorDrawPanel,
+  EditorTextPanel,
+  type Article,
+  type PersistedScene,
+} from "./diary_and_editor";
 
-// --- メインコンポーネント ---
-const AppContainer = () => {
-  const [activeTab, setActiveTab] = useState<'library' | 'calendar'>('library');
-  const [editingMagazine, setEditingMagazine] = useState<any | null>(null);
+type ScenesById = Record<string, PersistedScene>;
+
+const LS_ARTICLES_KEY = "demo_diary_articles_v2";
+const LS_SCENES_KEY = "demo_diary_scenes_v2";
+
+// --------------------
+// Dummy Data
+// --------------------
+function makeDummyArticles(): Article[] {
+  const now = Date.now();
+  const day = 1000 * 60 * 60 * 24;
+
+  return [
+    {
+      id: "a_001",
+      date: now - day * 0,
+      imageUrl:
+        "https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1200&q=80",
+      title: "Today",
+      content: "small note…\n夕方の光がよかった。",
+      color: "#111827",
+      rating: 72,
+      issueId: "i_001",
+    },
+    {
+      id: "a_002",
+      date: now - day * 1,
+      imageUrl:
+        "https://images.unsplash.com/photo-1520975693419-bcdbde0f89d4?auto=format&fit=crop&w=1200&q=80",
+      title: "Walk",
+      content: "歩いてると頭が整理される。\n余白が増える感じ。",
+      color: "#7c3aed",
+      rating: 40,
+      issueId: "i_001",
+    },
+    {
+      id: "a_003",
+      date: now - day * 2,
+      imageUrl:
+        "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1200&q=80",
+      title: "Work",
+      content: "詰めすぎた。\n次回はタスクを半分にする。",
+      color: "#16a34a",
+      rating: 55,
+      issueId: "i_001",
+    },
+    {
+      id: "a_004",
+      date: now - day * 3,
+      imageUrl:
+        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+      title: "Night",
+      content: "夜の散歩。\n静かなテンポが戻る。",
+      color: "#ef4444",
+      rating: 63,
+      issueId: "i_001",
+    },
+    {
+      id: "a_005",
+      date: now - day * 4,
+      imageUrl:
+        "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=1200&q=80",
+      title: "Coffee",
+      content: "カフェで少しだけ書く。\n手触りのある時間。",
+      color: "#0ea5e9",
+      rating: 80,
+      issueId: "i_001",
+    },
+    {
+      id: "a_006",
+      date: now - day * 5,
+      imageUrl:
+        "https://images.unsplash.com/photo-1452696192474-5a72f9a1cc98?auto=format&fit=crop&w=1200&q=80",
+      title: "Idea",
+      content: "雑誌の見開き構成を整理。\n視線誘導の筋が見えた。",
+      color: "#f59e0b",
+      rating: 68,
+      issueId: "i_001",
+    },
+  ];
+}
+
+// --------------------
+// localStorage utils
+// --------------------
+function safeParseJSON<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
+export default function DiaryPage() {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [scenesById, setScenesById] = useState<ScenesById>({});
+
+  const [openDrawId, setOpenDrawId] = useState<string | null>(null);
+  const [openTextId, setOpenTextId] = useState<string | null>(null);
+
+  // 初期ロード
+  useEffect(() => {
+    const storedArticles = safeParseJSON<Article[]>(
+      localStorage.getItem(LS_ARTICLES_KEY)
+    );
+    const storedScenes = safeParseJSON<ScenesById>(
+      localStorage.getItem(LS_SCENES_KEY)
+    );
+
+    if (storedArticles && storedArticles.length > 0) {
+      setArticles(storedArticles);
+    } else {
+      const dummy = makeDummyArticles();
+      setArticles(dummy);
+      localStorage.setItem(LS_ARTICLES_KEY, JSON.stringify(dummy));
+    }
+
+    if (storedScenes) setScenesById(storedScenes);
+  }, []);
+
+  // 永続化
+  useEffect(() => {
+    if (articles.length === 0) return;
+    localStorage.setItem(LS_ARTICLES_KEY, JSON.stringify(articles));
+  }, [articles]);
+
+  useEffect(() => {
+    localStorage.setItem(LS_SCENES_KEY, JSON.stringify(scenesById));
+  }, [scenesById]);
+
+  const sortedArticles = useMemo(() => {
+    return [...articles].sort((a, b) => b.date - a.date);
+  }, [articles]);
+
+  const activeTextArticle = useMemo(() => {
+    return openTextId ? articles.find((a) => a.id === openTextId) : undefined;
+  }, [openTextId, articles]);
+
+  const activeDrawArticle = useMemo(() => {
+    return openDrawId ? articles.find((a) => a.id === openDrawId) : undefined;
+  }, [openDrawId, articles]);
+
+  const resetLocal = () => {
+    localStorage.removeItem(LS_ARTICLES_KEY);
+    localStorage.removeItem(LS_SCENES_KEY);
+    const dummy = makeDummyArticles();
+    setArticles(dummy);
+    setScenesById({});
+    localStorage.setItem(LS_ARTICLES_KEY, JSON.stringify(dummy));
+  };
 
   return (
-    <div className="h-screen w-screen bg-[#F8F7F2] flex flex-col overflow-hidden">
-      
-      {/* 編集画面（フルスクリーン・オーバーレイ） */}
-      <AnimatePresence>
-        {editingMagazine && (
-          <motion.div 
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-50 bg-white"
-          >
-            <MagazineEditor 
-              magazine={editingMagazine} 
-              onClose={() => setEditingMagazine(null)} 
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* メインコンテンツエリア */}
-      <main className="flex-grow overflow-y-auto pb-20">
-        {activeTab === 'library' ? (
-          <MagazineLibrary onSelect={(mag) => setEditingMagazine(mag)} />
-        ) : (
-          <div className="p-10 text-center font-serif italic text-gray-400">
-             Calendar View (Input Area)
+    <div className="min-h-screen bg-stone-50">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-stone-50/80 backdrop-blur border-b border-stone-100">
+        <div className="px-6 py-4 flex items-end justify-between">
+          <div>
+            <div className="text-[10px] font-bold tracking-[0.3em] text-stone-400 uppercase">
+              Diary
+            </div>
+            <h1 className="text-2xl font-serif font-bold text-stone-900">
+              Cards
+            </h1>
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={resetLocal}
+              className="px-4 py-2 rounded-full bg-white border border-stone-200 shadow-sm text-xs font-bold tracking-widest uppercase text-stone-700 hover:bg-stone-100 active:scale-95 transition"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Grid */}
+      <main className="px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {sortedArticles.map((a) => (
+            <DiaryPreview
+              key={a.id}
+              article={a}
+              scene={scenesById[a.id] ?? null}
+              onDrawClick={() => setOpenDrawId(a.id)}
+              onTextClick={() => setOpenTextId(a.id)}
+              styleClass="aspect-[3/4]"
+            />
+          ))}
+        </div>
       </main>
 
-      {/* 下部 2タブナビゲーション */}
-      <nav className="h-20 bg-white/80 backdrop-blur-md border-t border-gray-100 flex items-center justify-around px-10 fixed bottom-0 w-full z-40">
-        <button 
-          onClick={() => setActiveTab('library')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'library' ? 'text-black' : 'text-gray-300'}`}
-        >
-          <Book size={24} />
-          <span className="text-[10px] font-bold tracking-widest uppercase">Library</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('calendar')}
-          className={`flex flex-col items-center gap-1 ${activeTab === 'calendar' ? 'text-black' : 'text-gray-300'}`}
-        >
-          <CalendarIcon size={24} />
-          <span className="text-[10px] font-bold tracking-widest uppercase">Calendar</span>
-        </button>
-      </nav>
+      {/* Draw Editor (Doneで保存) */}
+      {openDrawId && (
+        <EditorDrawPanel
+          key={openDrawId} // ←重要：記事切り替えでExcalidrawを安定再初期化
+          scene={scenesById[openDrawId] ?? null}
+          accentColor={activeDrawArticle?.color ?? "#000000"}
+          onSaveScene={(next) =>
+            setScenesById((prev) => ({ ...prev, [openDrawId]: next }))
+          }
+          onClose={() => setOpenDrawId(null)}
+        />
+      )}
+
+      {/* Text Editor */}
+      {openTextId && activeTextArticle && (
+        <EditorTextPanel
+          article={activeTextArticle}
+          onChange={(updated) =>
+            setArticles((prev) =>
+              prev.map((x) => (x.id === updated.id ? updated : x))
+            )
+          }
+          onClose={() => setOpenTextId(null)}
+        />
+      )}
     </div>
   );
-};
-
-// --- ライブラリ画面 ---
-const MagazineLibrary = ({ onSelect }: { onSelect: (mag: any) => void }) => {
-  const magazines = [
-    { id: 'w1', title: 'WEEKLY 03.11', type: 'weekly', cover: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400' },
-    { id: 's1', title: 'Travel in Kyoto', type: 'special', cover: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400' },
-  ];
-
-  return (
-    <div className="p-8 space-y-10">
-      <header className="flex justify-between items-end">
-        <h1 className="text-3xl font-serif font-bold italic tracking-tighter">Archive</h1>
-        <button className="p-2 bg-black text-white rounded-full"><Plus size={20} /></button>
-      </header>
-
-      <section className="grid grid-cols-2 gap-6">
-        {magazines.map((mag) => (
-          <div key={mag.id} onClick={() => onSelect(mag)} className="space-y-3 cursor-pointer group">
-            <div className="aspect-[3/4] bg-gray-200 overflow-hidden shadow-lg group-hover:shadow-2xl transition-all">
-              <img src={mag.cover} className="w-full h-full object-cover" />
-            </div>
-            <p className="text-[10px] font-mono uppercase tracking-widest text-gray-400">{mag.type}</p>
-            <p className="font-serif text-sm font-bold">{mag.title}</p>
-          </div>
-        ))}
-      </section>
-    </div>
-  );
-};
-
-// --- 編集画面（エディタ） ---
-const MagazineEditor = ({ magazine, onClose }: { magazine: any, onClose: () => void }) => {
-  return (
-    <div className="h-full flex flex-col bg-[#F4F4F4]">
-      {/* エディタヘッダー */}
-      <header className="h-16 bg-white border-b px-6 flex items-center justify-between">
-        <button onClick={onClose} className="text-sm font-serif italic text-gray-500 underline">Close</button>
-        <div className="text-center">
-          <p className="text-[10px] font-mono text-gray-400 leading-none">Editing {magazine.type}</p>
-          <p className="text-xs font-bold font-serif">{magazine.title}</p>
-        </div>
-        <button onClick={onClose} className="p-2 bg-black text-white rounded-full"><Check size={16} /></button>
-      </header>
-
-      {/* 編集メインエリア */}
-      <div className="flex-grow flex flex-col p-4 gap-4 overflow-hidden">
-        {/* 雑誌のページプレビュー */}
-        <div className="flex-grow bg-white shadow-inner flex items-center justify-center p-4">
-           <div className="w-full max-w-xs aspect-[3/4] bg-gray-50 shadow-2xl border flex items-center justify-center relative">
-              <p className="text-xs italic text-gray-300">Page Preview Area</p>
-              {/* ここに以前作った AdaptiveJournalEntry が入る */}
-           </div>
-        </div>
-
-        {/* 素材トレイ（特集号の場合） */}
-        <div className="h-48 bg-white/50 backdrop-blur-md rounded-t-3xl border-t border-white p-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Stock from Calendar</span>
-            <Grid size={14} className="text-gray-400" />
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex-shrink-0 w-24 aspect-square bg-white shadow-sm border border-white p-1">
-                <div className="w-full h-full bg-gray-100 overflow-hidden relative">
-                   <img src={`https://picsum.photos/seed/${i+10}/200`} className="w-full h-full object-cover opacity-50" />
-                   <div className="absolute inset-0 flex items-center justify-center">
-                      <Plus size={12} className="text-gray-400" />
-                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AppContainer;
+}

@@ -1,18 +1,16 @@
-'use client'
+"use client";
+import dynamic from "next/dynamic";
+import "@excalidraw/excalidraw/index.css";
 
-import dynamic from 'next/dynamic'
-import 'tldraw/tldraw.css'
-
-// tldrawを動的にインポート（SSRを無効化）
-const Tldraw = dynamic(async () => (await import('tldraw')).Tldraw, { 
-  ssr: false,
-  loading: () => <div>Loading...</div>
-})
+const Excalidraw = dynamic(
+  async () => (await import("@excalidraw/excalidraw")).Excalidraw,
+  { ssr: false }
+);
 
 export default function Page() {
   return (
-    <div style={{ position: 'fixed', inset: 0 }}>
-      <Tldraw persistenceKey="my-draw" />
+    <div style={{ height: "100vh" }}>
+      <Excalidraw />
     </div>
-  )
+  );
 }
