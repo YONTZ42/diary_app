@@ -1,8 +1,8 @@
 // src/components/PageCanvas/utils.ts
 
 // 必要な型（DataURLも追加）をインポート
-import type { BinaryFiles, FileId, DataURL } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type { BinaryFiles, DataURL } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement,FileId } from "@excalidraw/excalidraw/element/types";
 
 import { Page, AssetRef } from "../types/schema";
 
