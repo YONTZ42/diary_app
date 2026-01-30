@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, RectangleHorizontal } from "lucide-react";
 import clsx from "clsx";
+import { LayoutGrid, RectangleHorizontal } from "lucide-react";
+
 import {
   DiaryPreview,
   EditorDrawPanel,
@@ -12,6 +13,8 @@ import {
 } from "./diary_and_editor";
 
 type ScenesById = Record<string, PersistedScene>;
+
+type ViewMode = "grid" | "slide";
 
 const LS_ARTICLES_KEY = "demo_diary_articles_v2";
 const LS_SCENES_KEY = "demo_diary_scenes_v2";
@@ -94,11 +97,8 @@ function safeParseJSON<T>(value: string | null): T | null {
 }
 
 // --------------------
-// Main Component
+// Page
 // --------------------
-
-type ViewMode = "grid" | "slide";
-
 export default function DiaryPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [scenesById, setScenesById] = useState<ScenesById>({});
@@ -184,6 +184,7 @@ export default function DiaryPage() {
                     ? "bg-stone-900 text-white shadow"
                     : "text-stone-400 hover:text-stone-600"
                 )}
+                aria-label="Grid view"
               >
                 <LayoutGrid size={16} />
               </button>
@@ -195,6 +196,7 @@ export default function DiaryPage() {
                     ? "bg-stone-900 text-white shadow"
                     : "text-stone-400 hover:text-stone-600"
                 )}
+                aria-label="Slide view"
               >
                 <RectangleHorizontal size={16} />
               </button>
@@ -223,8 +225,9 @@ export default function DiaryPage() {
                   key={a.id}
                   article={a}
                   scene={scenesById[a.id] ?? null}
-                  onEditDraw={() => setOpenDrawId(a.id)}
-                  onEditText={() => setOpenTextId(a.id)}
+                  onDrawClick={() => setOpenDrawId(a.id)}
+                  onTextClick={() => setOpenTextId(a.id)}
+                  styleClass="aspect-[3/4]"
                 />
               ))}
             </div>
@@ -240,9 +243,9 @@ export default function DiaryPage() {
                 <DiaryPreview
                   article={a}
                   scene={scenesById[a.id] ?? null}
-                  onEditDraw={() => setOpenDrawId(a.id)}
-                  onEditText={() => setOpenTextId(a.id)}
-                  className="h-full w-full"
+                  onDrawClick={() => setOpenDrawId(a.id)}
+                  onTextClick={() => setOpenTextId(a.id)}
+                  styleClass="h-full w-full"
                 />
               </div>
             ))}
@@ -256,7 +259,6 @@ export default function DiaryPage() {
           key={openDrawId}
           scene={scenesById[openDrawId] ?? null}
           accentColor={activeDrawArticle?.color ?? "#000000"}
-          previewAspectRatio={3 / 4}
           onSaveScene={(next) =>
             setScenesById((prev) => ({ ...prev, [openDrawId]: next }))
           }
@@ -267,13 +269,10 @@ export default function DiaryPage() {
       {/* Text Editor */}
       {openTextId && activeTextArticle && (
         <EditorTextPanel
-          initialTitle={activeTextArticle.title ?? ""}
-          initialContent={activeTextArticle.content ?? ""}
-          onSave={({ title, content }) =>
+          article={activeTextArticle}
+          onChange={(updated) =>
             setArticles((prev) =>
-              prev.map((x) =>
-                x.id === activeTextArticle.id ? { ...x, title, content } : x
-              )
+              prev.map((x) => (x.id === updated.id ? updated : x))
             )
           }
           onClose={() => setOpenTextId(null)}
