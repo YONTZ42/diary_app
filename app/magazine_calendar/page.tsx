@@ -7,9 +7,9 @@ import clsx from "clsx";
 
 
 // 既存のコンポーネント（パスは適宜調整してください）
-import { MagazinePreview, EditorPanel } from "./_components/diary_and_editor_component";
-import { Calendar } from "./_components/calendar"; 
-import { ArticleSummaryList } from "./_components/article_summary_list";
+import { MagazinePreview, EditorPanel } from "../_components/diary_and_editor_component";
+import { Calendar } from "../_components/calendar"; 
+import { ArticleSummaryList } from "../_components/article_summary_list";
 //import {MagazinePreview, EditorPanel} from './_components/diary_and_editor_conponent';
 // --- Types ---
 type Issue = {
