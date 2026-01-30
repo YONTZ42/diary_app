@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { LayoutGrid, RectangleHorizontal } from "lucide-react";
+import clsx from "clsx";
 import {
   DiaryPreview,
   EditorDrawPanel,
@@ -25,68 +27,56 @@ function makeDummyArticles(): Article[] {
     {
       id: "a_001",
       date: now - day * 0,
-      imageUrl:
-        "https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Today",
       content: "small note…\n夕方の光がよかった。",
       color: "#111827",
       rating: 72,
-      issueId: "i_001",
     },
     {
       id: "a_002",
       date: now - day * 1,
-      imageUrl:
-        "https://images.unsplash.com/photo-1520975693419-bcdbde0f89d4?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Walk",
       content: "歩いてると頭が整理される。\n余白が増える感じ。",
       color: "#7c3aed",
       rating: 40,
-      issueId: "i_001",
     },
     {
       id: "a_003",
       date: now - day * 2,
-      imageUrl:
-        "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Work",
       content: "詰めすぎた。\n次回はタスクを半分にする。",
       color: "#16a34a",
       rating: 55,
-      issueId: "i_001",
     },
     {
       id: "a_004",
       date: now - day * 3,
-      imageUrl:
-        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Night",
       content: "夜の散歩。\n静かなテンポが戻る。",
       color: "#ef4444",
       rating: 63,
-      issueId: "i_001",
     },
     {
       id: "a_005",
       date: now - day * 4,
-      imageUrl:
-        "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Coffee",
       content: "カフェで少しだけ書く。\n手触りのある時間。",
       color: "#0ea5e9",
       rating: 80,
-      issueId: "i_001",
     },
     {
       id: "a_006",
       date: now - day * 5,
-      imageUrl:
-        "https://images.unsplash.com/photo-1452696192474-5a72f9a1cc98?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "",
       title: "Idea",
       content: "雑誌の見開き構成を整理。\n視線誘導の筋が見えた。",
       color: "#f59e0b",
       rating: 68,
-      issueId: "i_001",
     },
   ];
 }
@@ -103,12 +93,20 @@ function safeParseJSON<T>(value: string | null): T | null {
   }
 }
 
+// --------------------
+// Main Component
+// --------------------
+
+type ViewMode = "grid" | "slide";
+
 export default function DiaryPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [scenesById, setScenesById] = useState<ScenesById>({});
 
   const [openDrawId, setOpenDrawId] = useState<string | null>(null);
   const [openTextId, setOpenTextId] = useState<string | null>(null);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   // 初期ロード
   useEffect(() => {
@@ -140,8 +138,6 @@ export default function DiaryPage() {
     localStorage.setItem(LS_SCENES_KEY, JSON.stringify(scenesById));
   }, [scenesById]);
 
-  
-
   const sortedArticles = useMemo(() => {
     return [...articles].sort((a, b) => b.date - a.date);
   }, [articles]);
@@ -164,9 +160,9 @@ export default function DiaryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-50 flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-stone-50/80 backdrop-blur border-b border-stone-100">
+      <header className="sticky top-0 z-40 bg-stone-50/80 backdrop-blur border-b border-stone-100 shrink-0">
         <div className="px-6 py-4 flex items-end justify-between">
           <div>
             <div className="text-[10px] font-bold tracking-[0.3em] text-stone-400 uppercase">
@@ -177,7 +173,35 @@ export default function DiaryPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className="flex items-center bg-white border border-stone-200 rounded-full p-1 shadow-sm">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={clsx(
+                  "p-2 rounded-full transition-all",
+                  viewMode === "grid"
+                    ? "bg-stone-900 text-white shadow"
+                    : "text-stone-400 hover:text-stone-600"
+                )}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("slide")}
+                className={clsx(
+                  "p-2 rounded-full transition-all",
+                  viewMode === "slide"
+                    ? "bg-stone-900 text-white shadow"
+                    : "text-stone-400 hover:text-stone-600"
+                )}
+              >
+                <RectangleHorizontal size={16} />
+              </button>
+            </div>
+
+            <div className="w-[1px] h-6 bg-stone-200 mx-1" />
+
             <button
               onClick={resetLocal}
               className="px-4 py-2 rounded-full bg-white border border-stone-200 shadow-sm text-xs font-bold tracking-widest uppercase text-stone-700 hover:bg-stone-100 active:scale-95 transition"
@@ -188,28 +212,51 @@ export default function DiaryPage() {
         </div>
       </header>
 
-      {/* Grid */}
-      <main className="px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {sortedArticles.map((a) => (
-            <DiaryPreview
-              key={a.id}
-              article={a}
-              scene={scenesById[a.id] ?? null}
-              onDrawClick={() => setOpenDrawId(a.id)}
-              onTextClick={() => setOpenTextId(a.id)}
-              styleClass="aspect-[3/4]"
-            />
-          ))}
-        </div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden flex flex-col relative">
+        {viewMode === "grid" ? (
+          // === GRID VIEW ===
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+              {sortedArticles.map((a) => (
+                <DiaryPreview
+                  key={a.id}
+                  article={a}
+                  scene={scenesById[a.id] ?? null}
+                  onEditDraw={() => setOpenDrawId(a.id)}
+                  onEditText={() => setOpenTextId(a.id)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          // === SLIDE VIEW (Horizontal Scroll Snap) ===
+          <div className="flex-1 flex items-center overflow-x-auto snap-x snap-mandatory px-6 py-8 gap-6 no-scrollbar">
+            {sortedArticles.map((a) => (
+              <div
+                key={a.id}
+                className="snap-center shrink-0 w-[85vw] sm:w-[400px] h-full max-h-[700px] flex flex-col justify-center"
+              >
+                <DiaryPreview
+                  article={a}
+                  scene={scenesById[a.id] ?? null}
+                  onEditDraw={() => setOpenDrawId(a.id)}
+                  onEditText={() => setOpenTextId(a.id)}
+                  className="h-full w-full"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
-      {/* Draw Editor (Doneで保存) */}
+      {/* Draw Editor */}
       {openDrawId && (
         <EditorDrawPanel
-          key={openDrawId} // ←重要：記事切り替えでExcalidrawを安定再初期化
+          key={openDrawId}
           scene={scenesById[openDrawId] ?? null}
           accentColor={activeDrawArticle?.color ?? "#000000"}
+          previewAspectRatio={3 / 4}
           onSaveScene={(next) =>
             setScenesById((prev) => ({ ...prev, [openDrawId]: next }))
           }
@@ -220,10 +267,13 @@ export default function DiaryPage() {
       {/* Text Editor */}
       {openTextId && activeTextArticle && (
         <EditorTextPanel
-          article={activeTextArticle}
-          onChange={(updated) =>
+          initialTitle={activeTextArticle.title ?? ""}
+          initialContent={activeTextArticle.content ?? ""}
+          onSave={({ title, content }) =>
             setArticles((prev) =>
-              prev.map((x) => (x.id === updated.id ? updated : x))
+              prev.map((x) =>
+                x.id === activeTextArticle.id ? { ...x, title, content } : x
+              )
             )
           }
           onClose={() => setOpenTextId(null)}
