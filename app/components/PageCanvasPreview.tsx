@@ -160,7 +160,7 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
 
         <div className="absolute inset-0 bg-black/0 group-hover/canvas:bg-black/5 z-20 transition-colors pointer-events-none" />
 
-        <div className="w-full h-full relative">
+        <div className="w-full h-full relative exca-preview">
           {/* 
             ★ここが重要: key={renderKey} を指定することで、
             pageデータが更新された（updatedAtが変わった）タイミングで
