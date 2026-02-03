@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Columns } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Columns, Loader2 } from 'lucide-react';
 
 export type ViewMode = 'month' | 'week';
 
@@ -10,6 +10,7 @@ interface ScheduleNavigatorProps {
   onNext: () => void;
   onViewChange: (mode: ViewMode) => void;
   onToday: () => void;
+  isLoading?: boolean; // 追加
 }
 
 export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
@@ -18,7 +19,8 @@ export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
   onPrev,
   onNext,
   onViewChange,
-  onToday
+  onToday,
+  isLoading = false
 }) => {
   const displayDate = viewMode === 'month'
     ? currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
@@ -30,7 +32,8 @@ export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
       {/* View Switcher */}
       <div className="flex bg-gray-100 rounded-lg p-1 mb-2 sm:mb-0">
         <button
-          onClick={() => onViewChange('month')}
+          onClick={() => !isLoading && onViewChange('month')}
+          disabled={isLoading}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
             viewMode === 'month' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
@@ -38,7 +41,8 @@ export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
           <Calendar size={14} /> Month
         </button>
         <button
-          onClick={() => onViewChange('week')}
+          onClick={() => !isLoading && onViewChange('week')}
+          disabled={isLoading}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all ${
             viewMode === 'week' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
@@ -49,15 +53,33 @@ export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
 
       {/* Date Navigation */}
       <div className="flex items-center gap-4">
-        <button onClick={onPrev} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+        <button 
+          onClick={onPrev} 
+          disabled={isLoading}
+          className="p-2 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
           <ChevronLeft size={20} />
         </button>
         
-        <div className="text-center min-w-[140px]">
-          <h2 className="font-serif font-bold text-lg text-gray-800 leading-none">{displayDate}</h2>
+        <div className="text-center min-w-[160px] relative">
+          <h2 
+            className={`font-serif font-bold text-lg text-gray-800 leading-none transition-opacity ${isLoading ? 'opacity-30' : 'opacity-100'}`}
+          >
+            {displayDate}
+          </h2>
+          {/* ローディングスピナー */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 size={16} className="animate-spin text-blue-500" />
+            </div>
+          )}
         </div>
 
-        <button onClick={onNext} className="p-2 rounded-full hover:bg-gray-100 text-gray-600">
+        <button 
+          onClick={onNext} 
+          disabled={isLoading}
+          className="p-2 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
           <ChevronRight size={20} />
         </button>
       </div>
@@ -66,7 +88,8 @@ export const ScheduleNavigator: React.FC<ScheduleNavigatorProps> = ({
       <div className="flex gap-2">
          <button 
            onClick={onToday}
-           className="text-xs font-bold text-blue-600 px-3 py-1 hover:bg-blue-50 rounded-full"
+           disabled={isLoading}
+           className="text-xs font-bold text-blue-600 px-3 py-1 hover:bg-blue-50 rounded-full disabled:opacity-50"
          >
            TODAY
          </button>

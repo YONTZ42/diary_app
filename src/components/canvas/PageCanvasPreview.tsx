@@ -157,7 +157,7 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
         {/* absolute inset-0 で親(h-[70%])いっぱいに広げる */}
         <div className="absolute inset-0 w-full h-full">
             {/* ポインターイベントを無効化して「見るだけ」にするが、レンダリング自体は阻害しない */}
-            <div className="w-full h-full pointer-events-none canvas">
+            <div className="w-full h-full pointer-events-none exca-preview">
                 <Excalidraw
                     key={renderKey}
                     initialData={initialData as any}
@@ -174,6 +174,7 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
                             changeViewBackgroundColor: false,
                         },
                     }}
+                    
                 />
             </div>
         </div>

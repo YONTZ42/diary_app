@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react'; // useRef, useEffect を削除
 import { Page } from '@/types/schema';
 import { PageCanvasPreview } from '@/components/canvas/PageCanvasPreview';
 import { Plus, X } from 'lucide-react';
@@ -19,87 +19,76 @@ export const CalendarDayPreviewArea: React.FC<CalendarDayPreviewAreaProps> = ({
   onEditPage,
   onCreateNew,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // 表示されたら自動的にスクロールして見せる
-  useEffect(() => {
-    if (date && containerRef.current) {
-      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [date]);
+  // useEffectによる自動スクロール処理を削除しました
 
   if (!date) return null;
 
-  const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
     <AnimatePresence>
       <motion.div
-        ref={containerRef}
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="w-full max-w-5xl mx-auto mt-8 overflow-hidden"
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="w-full max-w-6xl mx-auto mt-4 overflow-hidden"
       >
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 md:p-8 mb-24">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-serif font-bold text-gray-800 flex items-center gap-3">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-24 shadow-sm">
+          
+          {/* Header (Minimal) */}
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-gray-700 font-serif">
                 {dateStr}
-                <span className="bg-gray-100 text-gray-500 text-xs font-sans font-bold px-2 py-1 rounded-full">
-                  {pages.length} Entries
-                </span>
               </h2>
+              <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                {pages.length}
+              </span>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={onCreateNew}
-                className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md hover:bg-slate-800 transition active:scale-95"
+                className="flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-slate-800 transition active:scale-95"
               >
-                <Plus size={16} />
-                Create New
+                <Plus size={12} />
+                New
               </button>
               <button 
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
               >
-                <X size={24} />
+                <X size={16} />
               </button>
             </div>
           </div>
 
-          {/* Horizontal Scroll Area */}
-          <div className="relative w-full overflow-x-auto pb-4 -mx-2 px-2">
-            <div className="flex gap-6 min-w-max">
+          {/* Horizontal Scroll Area (Main Content) */}
+          <div className="relative w-full overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="flex gap-4 min-w-max">
               {pages.length > 0 ? (
                 pages.map((page) => (
                   <motion.div
                     key={page.id}
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="relative group cursor-pointer"
                     onClick={() => onEditPage(page)}
                   >
                     {/* Preview Card */}
-                    {/* aspect-[3/4] で手帳比率を維持しつつ、高さ400px程度で見やすく */}
-                    <div className="w-[300px] h-[400px] shadow-lg rounded-xl overflow-hidden border border-gray-100 bg-white transition-all duration-300 group-hover:shadow-2xl group-hover:-translate-y-2">
-                      {/* ポインターイベントを無効化してカード全体のクリックを優先 */}
+                    {/* カードサイズは見やすさを維持しつつ少しコンパクトに */}
+                    <div className="w-[240px] h-[320px] shadow-md rounded-lg overflow-hidden border border-gray-100 bg-white transition-all duration-200 group-hover:shadow-xl group-hover:-translate-y-1">
                       <div className="w-full h-full pointer-events-none">
-                         <PageCanvasPreview page={page} className="w-full h-full" />
+                         <PageCanvasPreview page={page} className="w-full h-full text-[0.8em]" />
                       </div>
-                      
-                      {/* Hover Overlay */}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
                     </div>
                   </motion.div>
                 ))
               ) : (
-                <div className="w-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                   <p className="font-serif italic text-lg mb-2">No diary entries for this day.</p>
-                   <p className="text-sm">Tap "Create New" to start writing.</p>
+                <div className="w-full py-8 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200 rounded-lg bg-gray-50/50">
+                   <p className="text-xs italic mb-1">No entries yet</p>
                 </div>
               )}
             </div>

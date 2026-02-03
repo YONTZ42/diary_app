@@ -1,3 +1,7 @@
+
+
+/*
+
 import type { Metadata } from "next";
 import { Inter, Noto_Serif_JP } from "next/font/google"; // 任意のフォント
 import "./globals.css";
@@ -24,6 +28,38 @@ export default function RootLayout({
         <ClientLayout>
           {children}
         </ClientLayout>
+      </body>
+    </html>
+  );
+}
+
+*/
+
+
+// src/app/layout.tsx
+import type { Metadata } from "next";
+import { Inter, Noto_Serif_JP } from "next/font/google";
+import "./globals.css";
+import "@excalidraw/excalidraw/index.css";
+
+const inter = Inter({ subsets: ["latin"] });
+const serif = Noto_Serif_JP({ weight: ["400", "700"], subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Deco Techo",
+  description: "Digital scrapbooking app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      {/* ここでフォントや基本スタイルを適用 */}
+      <body className={`${inter.className} ${serif.className}`}>
+        {children}
       </body>
     </html>
   );
