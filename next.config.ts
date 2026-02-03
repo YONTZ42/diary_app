@@ -5,7 +5,7 @@ const csp = [
   "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://esm.sh",
   "connect-src 'self' https: blob: data:",
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -13,6 +13,17 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // 画像ドメインの許可設定を追加
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
+    ],
+  },
+  
+  // 既存のヘッダー設定
   async headers() {
     return [
       {

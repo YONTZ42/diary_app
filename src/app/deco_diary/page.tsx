@@ -1,0 +1,141 @@
+"use client";
+
+import React, { useState } from 'react';
+import { NotebookCard } from '@/components/diary/NotebookCard';
+import { BookReader } from '@/components/diary/BookReader';
+import { MOCK_NOTEBOOKS, MOCK_PAGES } from '@/utils/dummyDiary';
+import { Notebook, Page } from '@/types/schema';
+import { NotebookCreator } from '@/components/diary/NotebookCreator';
+import { PlusIcon } from '@heroicons/react/24/solid';
+
+// UUID生成
+const uuid = () => Math.random().toString(36).substring(2, 9);
+
+export default function DiaryPage() {
+  // --- Data State (本来はDB/API) ---
+  const [notebooks, setNotebooks] = useState<Notebook[]>(MOCK_NOTEBOOKS);
+  const [allPages, setAllPages] = useState<Page[]>(MOCK_PAGES);
+  const [isCreatorOpen, setIsCreatorOpen] = useState(false); // 新規作成モーダルの状態
+
+  // --- UI State ---
+  const [openedNotebookId, setOpenedNotebookId] = useState<string | null>(null);
+
+  // 選択中のノートブックオブジェクト
+  const activeNotebook = notebooks.find(nb => nb.id === openedNotebookId);
+  
+  // 選択中のノートブックに含まれるページ一覧を取得
+  const activePages = activeNotebook 
+    ? activeNotebook.pageIds.map(id => allPages.find(p => p.id === id)).filter((p): p is Page => !!p)
+    : [];
+
+  // --- Handlers ---
+
+  const handleCreateNotebook = (notebookData: Partial<Notebook>) => {
+    const newNb: Notebook = {
+      id: uuid(),
+      title: notebookData.title || 'Untitled',
+      description: notebookData.description,
+      pageIds: [],
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      cover: notebookData.cover || { kind: 'local', key: 'cover-blue', mime: 'image/png' },
+      // 他の初期値
+      tags: [],
+    };
+    setNotebooks([...notebooks, newNb]);
+  };
+
+
+  const handleUpdatePage = (updatedPage: Page) => {
+    setAllPages(prev => prev.map(p => p.id === updatedPage.id ? updatedPage : p));
+  };
+
+  const handleCreatePage = (notebookId: string) => {
+    // 新規ページ作成
+    const newPage: Page = {
+      id: uuid(),
+      type: 'diary',
+      date: new Date().toISOString().split('T')[0], // 今日
+      title: '',
+      note: '',
+      sceneData: {}, // 空のキャンバス
+      assets: {},
+      usedStickerIds: [],
+      preview: { kind: 'local', key: '', mime: 'image/png' },
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 1. ページを全ページリストに追加
+    setAllPages(prev => [...prev, newPage]);
+
+    // 2. ノートブックのpageIdsに追加
+    setNotebooks(prev => prev.map(nb => {
+      if (nb.id === notebookId) {
+        return { ...nb, pageIds: [...nb.pageIds, newPage.id] };
+      }
+      return nb;
+    }));
+  };
+
+  return (
+    <main className="min-h-screen bg-[#F9F8F6] pb-24">
+      {/* 
+        Condition: Notebook is Open? 
+        YES -> Show BookReader
+        NO  -> Show Shelf
+      */}
+      {activeNotebook ? (
+        <BookReader
+          notebook={activeNotebook}
+          initialPages={activePages}
+          onClose={() => setOpenedNotebookId(null)}
+          onUpdatePage={handleUpdatePage}
+          onCreatePage={handleCreatePage}
+        />
+      ) : (
+        /* --- SHELF VIEW --- */
+        <div className="p-6">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-serif font-bold text-gray-800">My Shelf</h1>
+              <p className="text-gray-500 text-sm mt-1">
+                {notebooks.length} notebooks
+              </p>
+            </div>
+            <button 
+              onClick={() => setIsCreatorOpen(true)} // モーダルを開く
+              className="bg-black text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition shadow-lg flex items-center gap-2"
+            >
+              <PlusIcon className="w-4 h-4" /> {/* 必要ならIcon import */}
+              <span>New Book</span>
+            </button>
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-y-10 gap-x-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {notebooks.map(nb => (
+              <NotebookCard
+                key={nb.id}
+                notebook={nb}
+                onClick={() => setOpenedNotebookId(nb.id)}
+              />
+            ))}
+          </div>
+
+          {/* 装飾: 棚板のライン (グリッドの下に線を引くなど、よりリッチにするならここに) */}
+        </div>
+      )}
+
+            {isCreatorOpen && (
+        <NotebookCreator
+          onClose={() => setIsCreatorOpen(false)}
+          onCreate={handleCreateNotebook}
+        />
+      )}
+
+    </main>
+  );
+}
