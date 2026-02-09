@@ -2,73 +2,85 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Page } from "@/types/schema";
+import { Schedule } from "@/types/schema"; // Page -> Schedule
 import { mapAssetsToExcalidrawFiles } from "@/utils/excalidrawMapper";
 
-// ローディング中は何も表示しない（ちらつき防止）
+// ローディング中は白背景
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then((m) => m.Excalidraw),
   { ssr: false, loading: () => <div className="w-full h-full bg-white" /> }
 );
 
 interface ScheduleCanvasPreviewProps {
-  page: Page;
+  schedule: Schedule; // props名を変更
   onClick?: () => void;
 }
 
-const ScheduleCanvasPreviewBase: React.FC<ScheduleCanvasPreviewProps> = ({ page, onClick }) => {
+const ScheduleCanvasPreviewBase: React.FC<ScheduleCanvasPreviewProps> = ({ schedule, onClick }) => {
   const [api, setApi] = useState<any>(null);
-  const [isReady, setIsReady] = useState(false); // 描画準備完了フラグ
+  
+  // 初期化フラグ (描画完了まで隠す)
+  const [isReady, setIsReady] = useState(false);
 
+  // 一意のキー (ID + 更新日時)
+  const scheduleUniqueKey = `${schedule.id}-${schedule.updatedAt}`;
+
+  // データ準備 (安全策を追加)
   const initialData = useMemo(() => {
+    // sceneData.elements が配列でない場合は空配列にする
+    const elements = Array.isArray(schedule.sceneData?.elements) 
+      ? schedule.sceneData.elements 
+      : [];
+      
     return {
-      elements: page.sceneData?.elements || [],
+      elements,
       appState: {
-        ...page.sceneData?.appState,
+        ...(schedule.sceneData?.appState || {}),
         viewBackgroundColor: "#ffffff",
-        scrollX: 0, scrollY: 0, 
-        // 初期ズームを小さめにしておく（大きすぎてはみ出るのを防ぐ）
-        zoom: { value: 0.1 } 
+        scrollX: 0, scrollY: 0,
+        // collaboratorsがないとエラーになる場合があるので補完
+        collaborators: new Map(), 
       },
-      files: mapAssetsToExcalidrawFiles(page.assets),
+      files: mapAssetsToExcalidrawFiles(schedule.assets || {}),
     };
-  }, [page]);
+  }, [schedule]);
 
-  const renderKey = `${page.id}-${page.updatedAt}`;
+  // IDが変わったら一旦隠す
+  useEffect(() => {
+    setIsReady(false);
+  }, [scheduleUniqueKey]);
 
   useEffect(() => {
     if (!api || !initialData.elements.length) return;
 
-    // 描画が安定するまで少し待つ
+    // 描画安定待ち
     const timer = setTimeout(() => {
       api.scrollToContent(initialData.elements, { 
          fitToContent: true,
          animate: false 
       });
-      // ズームフィット完了後に表示フラグを立てる
-      requestAnimationFrame(() => setIsReady(true));
-    }, 100);
+      // 完了後に表示
+      requestAnimationFrame(() => {
+        setTimeout(() => setIsReady(true), 50);
+      });
+    }, 150);
 
     return () => clearTimeout(timer);
-  }, [api, initialData]);
+  }, [api, initialData, scheduleUniqueKey]);
 
   return (
     <div 
       className="w-full h-full relative cursor-pointer group bg-white shadow-sm overflow-hidden rounded-lg isolate"
       onClick={onClick}
     >
-      {/* 
-        Excalidraw Container 
-        isReadyがfalseの間は opacity-0 で隠しておくことで、
-        「初期化中の一瞬大きな表示」や「リサイズ中のガタつき」をユーザーに見せない
-      */}
+      {/* Excalidraw Container */}
       <div 
-        className={`absolute inset-0 transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className="absolute inset-0 w-full h-full transition-opacity duration-300"
+        style={{ opacity: isReady ? 1 : 0 }}
       >
-        {/* pointer-events-none で操作無効化 */}
-        <div className="w-full h-full pointer-events-none">
+        <div className="w-full h-full pointer-events-none exca-preview">
           <Excalidraw
-            key={renderKey}
+            key={scheduleUniqueKey} // IDが変わったら再マウント
             initialData={initialData as any}
             excalidrawAPI={(apiObj: any) => setApi(apiObj)}
             viewModeEnabled={true}
@@ -87,12 +99,14 @@ const ScheduleCanvasPreviewBase: React.FC<ScheduleCanvasPreviewProps> = ({ page,
         </div>
       </div>
 
-      {/* Loading Placeholder (isReadyになるまで表示) */}
-      {!isReady && (
-        <div className="absolute inset-0 bg-white z-10 flex items-center justify-center">
-           {/* 必要ならスピナーなどを入れるが、白背景だけでもOK */}
-        </div>
-      )}
+      {/* Loading Cover */}
+      <div 
+        className="absolute inset-0 bg-white z-10 transition-opacity duration-300"
+        style={{ 
+          opacity: isReady ? 0 : 1, 
+          pointerEvents: isReady ? 'none' : 'auto' 
+        }}
+      />
 
       {/* Hover Overlay */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 z-20">
@@ -104,7 +118,6 @@ const ScheduleCanvasPreviewBase: React.FC<ScheduleCanvasPreviewProps> = ({ page,
   );
 };
 
-// React.memoで再レンダリング抑制
 export const ScheduleCanvasPreview = React.memo(ScheduleCanvasPreviewBase, (prev, next) => {
-  return prev.page.id === next.page.id && prev.page.updatedAt === next.page.updatedAt;
+  return prev.schedule.id === next.schedule.id && prev.schedule.updatedAt === next.schedule.updatedAt;
 });

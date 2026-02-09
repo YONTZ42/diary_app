@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Sticker } from '@/types/schema';
+import { getS3Url } from '@/utils/s3Utils';
 
 const getAssetUrl = (asset: any) => {
   if (!asset || !asset.key) return '/placeholder.png';
@@ -14,7 +15,6 @@ interface StickerCardProps {
 
 export const StickerCard: React.FC<StickerCardProps> = ({ sticker, onClick }) => {
   const targetAsset = sticker.thumb || sticker.png;
-
   return (
     <button
       onClick={() => onClick(sticker)}
@@ -29,7 +29,7 @@ export const StickerCard: React.FC<StickerCardProps> = ({ sticker, onClick }) =>
       */}
       <div className="relative h-full w-full p-2"> 
         <Image
-          src={getAssetUrl(targetAsset)}
+          src={sticker.png.key || '/placeholder.png'}
           alt={sticker.name || 'sticker'}
           fill
           sizes="(max-width: 768px) 33vw, 20vw"

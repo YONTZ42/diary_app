@@ -45,17 +45,20 @@ function prepareExcalidrawData(page: Page) {
             return { ...el, width: FRAME_W, height: FRAME_H, locked: true, strokeColor: "#e5e7eb" };
         }
         return el;
+        
     });
   }
 
   return {
     elements,
     appState: {
-      ...page.sceneData?.appState,
+      ...(page.sceneData?.appState || {}),
+      collaborators: new Map(), 
+
       viewBackgroundColor: "#fafafa",
       scrollX: 0, scrollY: 0, zoom: { value: 0.5 } // 初期ズームを仮設定
     },
-    files: mapAssetsToExcalidrawFiles(page.assets),
+    files: mapAssetsToExcalidrawFiles(page.assets || {}),
   };
 }
 
@@ -107,6 +110,8 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
 
     return () => clearTimeout(timer);
   }, [api, initialData]);
+
+    const stickerCount = page.usedStickerIds?.length || 0;
 
   return (
     <div
@@ -160,7 +165,7 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
             <div className="w-full h-full pointer-events-none exca-preview">
                 <Excalidraw
                     key={renderKey}
-                    initialData={initialData as any}
+                    initialData={initialData}
                     excalidrawAPI={(apiObj: any) => setApi(apiObj)}
                     viewModeEnabled={true}
                     zenModeEnabled={true}
@@ -203,11 +208,12 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
           </p>
         </div>
         
-        {page.usedStickerIds.length > 0 && (
+        {stickerCount > 0 && (
           <div className="absolute bottom-3 right-3">
              <span className="text-[10px] font-bold text-pink-500 bg-pink-50 px-2 py-1 rounded-full border border-pink-100">
-               ★ {page.usedStickerIds.length} stickers
+               ★ {stickerCount} stickers
              </span>
+
           </div>
         )}
       </div>

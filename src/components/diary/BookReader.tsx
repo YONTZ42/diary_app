@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { ChevronLeft, X, Plus, Grip, Maximize2 } from 'lucide-react';
 import { Page, Notebook } from '@/types/schema';
 import { PageCanvasPreview } from '@/components/canvas/PageCanvasPreview';
 import { PageCanvasEditor } from '@/components/canvas/PageCanvasEditor';
@@ -23,45 +23,136 @@ export const BookReader: React.FC<BookReaderProps> = ({
   onCreatePage,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialPages.length > 0 ? initialPages.length - 1 : 0);
-  const [prevPageCount, setPrevPageCount] = useState(initialPages.length);
-  const [direction, setDirection] = useState(0);
+  const [viewMode, setViewMode] = useState<'grid' | 'detail'>('detail');
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
-
-  const currentPage = initialPages[currentIndex];
+  
+  // ページ追加時の自動スクロール用
+  const [prevPageCount, setPrevPageCount] = useState(initialPages.length);
 
   useEffect(() => {
     if (initialPages.length > prevPageCount) {
       setCurrentIndex(initialPages.length - 1);
-      setDirection(1);
+      setViewMode('detail'); // 新規作成時は詳細モードへ
     }
     setPrevPageCount(initialPages.length);
   }, [initialPages.length, prevPageCount]);
 
-  const paginate = (newDirection: number) => {
-    const nextIndex = currentIndex + newDirection;
-    if (nextIndex >= 0 && nextIndex < initialPages.length) {
-      setDirection(newDirection);
-      setCurrentIndex(nextIndex);
-    } else if (nextIndex === initialPages.length) {
+  const currentPage = initialPages[currentIndex];
+
+  // --- Handlers ---
+
+  const handleSelectPage = (index: number) => {
+    setCurrentIndex(index);
+    setViewMode('detail');
+  };
+
+  const handleNext = () => {
+    if (currentIndex < initialPages.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
       onCreatePage(notebook.id);
     }
   };
 
-  const variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? '100%' : '-100%',
-      opacity: 0, scale: 0.9, rotateY: direction > 0 ? 15 : -15, zIndex: 0,
-    }),
-    center: {
-      x: 0, opacity: 1, scale: 1, rotateY: 0, zIndex: 1,
-      transition: { duration: 0.4, type: "spring" as const, stiffness: 260, damping: 20 }
-    },
-    exit: (direction: number) => ({
-      x: direction < 0 ? '100%' : '-100%',
-      opacity: 0, scale: 0.9, rotateY: direction < 0 ? 15 : -15, zIndex: 0,
-      transition: { duration: 0.3 }
-    })
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
   };
+
+  // スワイプ処理 (Framer Motion)
+  const x = useMotionValue(0);
+  const handleDragEnd = (event: any, info: any) => {
+    if (info.offset.x < -100) {
+      handleNext();
+    } else if (info.offset.x > 100) {
+      handlePrev();
+    }
+  };
+
+  // --- Sub Components ---
+
+  // 1. Grid View (Filmstrip)
+  const renderGridView = () => (
+    <div className="flex-1 overflow-y-hidden overflow-x-auto p-4 flex items-center gap-4 bg-[#F2F0E9]">
+      {initialPages.map((page, index) => (
+        <motion.div
+          key={page.id}
+          layoutId={`page-${page.id}`}
+          onClick={() => handleSelectPage(index)}
+          className={`relative shrink-0 w-40 aspect-[3/4] rounded-lg shadow-md bg-white overflow-hidden cursor-pointer border-2 transition-all ${
+            index === currentIndex ? 'border-blue-500 scale-105 z-10' : 'border-transparent opacity-70 hover:opacity-100'
+          }`}
+        >
+          <div className="w-full h-full pointer-events-none">
+             <PageCanvasPreview page={page} className="w-full h-full text-[0.3rem]" />
+          </div>
+          <div className="absolute bottom-0 w-full bg-black/50 text-white text-[10px] p-1 text-center truncate">
+            {page.title || page.date}
+          </div>
+        </motion.div>
+      ))}
+      
+      {/* New Page Button in Grid */}
+      <button
+        onClick={() => onCreatePage(notebook.id)}
+        className="shrink-0 w-40 aspect-[3/4] rounded-lg border-2 border-dashed border-gray-400 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+      >
+        <Plus size={32} />
+        <span className="text-xs font-bold mt-2">New Page</span>
+      </button>
+    </div>
+  );
+
+  // 2. Detail View (Swipeable)
+  const renderDetailView = () => (
+    <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden bg-[#F2F0E9]">
+      <div className="relative w-full max-w-lg h-[80vh] px-4">
+        {currentPage ? (
+          <motion.div
+            key={currentPage.id}
+            layoutId={`page-${currentPage.id}`}
+            className="w-full h-full bg-white shadow-2xl rounded-l-sm rounded-r-2xl border-l border-l-gray-200 relative overflow-hidden"
+            // Simple slide animation
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }} // Fast transition
+            
+            // Drag logic
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={handleDragEnd}
+            style={{ x }}
+          >
+            <PageCanvasPreview
+              page={currentPage}
+              onEditCanvas={() => setEditingPageId(currentPage.id)}
+              onEditHeader={() => setEditingPageId(currentPage.id)}
+              className="w-full h-full"
+            />
+            
+            {/* Page Number Badge */}
+            <div className="absolute bottom-4 right-4 bg-black/5 text-gray-400 text-xs px-2 py-1 rounded-full font-mono pointer-events-none">
+               {currentIndex + 1} / {initialPages.length}
+            </div>
+          </motion.div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+             <p className="mb-4">No pages yet</p>
+             <button onClick={() => onCreatePage(notebook.id)} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm">Create First Page</button>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Areas (Invisible buttons for clicking sides) */}
+      <div className="absolute inset-y-0 left-0 w-16 z-10 cursor-pointer" onClick={handlePrev} />
+      <div className="absolute inset-y-0 right-0 w-16 z-10 cursor-pointer" onClick={handleNext} />
+    </div>
+  );
+
+  // --- Main Render ---
 
   if (editingPageId && currentPage) {
     return (
@@ -77,61 +168,53 @@ export const BookReader: React.FC<BookReaderProps> = ({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[#F2F0E9]">
-      <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur border-b border-gray-200/50 z-50 shadow-sm">
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5 transition-colors"><X size={20} className="text-gray-600" /></button>
-        <div className="text-center">
-          <h2 className="font-serif font-bold text-gray-800 text-lg">{notebook.title}</h2>
-          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{initialPages.length > 0 ? currentIndex + 1 : 0} / {initialPages.length}</p>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur border-b border-gray-200 z-50">
+        <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5"><X size={20} className="text-gray-600" /></button>
+        
+        <div className="flex flex-col items-center">
+          <span className="font-serif font-bold text-gray-800">{notebook.title}</span>
+          {/* Mode Switcher (Tab) */}
+          <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg mt-1">
+             <button 
+               onClick={() => setViewMode('detail')}
+               className={`p-1 rounded-md transition-all ${viewMode === 'detail' ? 'bg-white shadow text-black' : 'text-gray-400'}`}
+             >
+               <Maximize2 size={14} />
+             </button>
+             <button 
+               onClick={() => setViewMode('grid')}
+               className={`p-1 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow text-black' : 'text-gray-400'}`}
+             >
+               <Grip size={14} />
+             </button>
+          </div>
         </div>
+        
         <div className="w-10" />
       </div>
 
-      <div className="flex-1 relative overflow-hidden flex items-center justify-center perspective-[1200px]">
-        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+      {/* Content Area */}
+      {viewMode === 'grid' ? renderGridView() : renderDetailView()}
 
-        {currentPage ? (
-          <AnimatePresence initial={false} custom={direction} mode="popLayout">
-            <motion.div
-              key={currentPage.id}
-              custom={direction}
-              variants={variants}
-              initial="enter" animate="center" exit="exit"
-              // 高さを明示 (h-[80vh]) し、CSSの3D変形崩れを防ぐ
-              className="absolute w-full max-w-lg h-[80vh] px-4"
-              style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}
-            >
-              <div className="w-full h-full relative shadow-2xl rounded-l-sm rounded-r-2xl bg-white flex flex-col">
-                <PageCanvasPreview
-                  page={currentPage}
-                  onEditCanvas={() => setEditingPageId(currentPage.id)}
-                  onEditHeader={() => setEditingPageId(currentPage.id)}
-                  // w-full h-full で親いっぱいにする
-                  className="w-full h-full rounded-l-sm rounded-r-2xl border-l border-l-gray-200"
-                />
-                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-black/20 to-transparent pointer-events-none mix-blend-multiply rounded-l-sm z-20" />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <div className="text-center text-gray-400">
-             <p className="mb-4 font-serif">ページがまだありません</p>
-             <button onClick={() => onCreatePage(notebook.id)} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">最初のページを作る</button>
-          </div>
-        )}
-
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 md:px-8 pointer-events-none z-30">
-          <button onClick={() => paginate(-1)} disabled={currentIndex === 0} className="pointer-events-auto p-4 rounded-full bg-white/90 shadow-xl text-gray-700 disabled:opacity-0 hover:scale-110 active:scale-95 transition-all backdrop-blur-sm"><ChevronLeft size={24} /></button>
-          <button onClick={() => paginate(1)} className="pointer-events-auto p-4 rounded-full bg-white/90 shadow-xl text-gray-700 hover:scale-110 active:scale-95 transition-all backdrop-blur-sm flex items-center justify-center">
-            {currentIndex === initialPages.length - 1 ? <Plus size={24} className="text-blue-600" /> : <ChevronRight size={24} />}
-          </button>
+      {/* Footer (Detail Mode Only) */}
+      {viewMode === 'detail' && (
+        <div className="pb-safe pt-2 bg-transparent text-center z-30 mb-6">
+           <div className="flex justify-center items-center gap-4">
+              <button onClick={() => setViewMode('grid')} className="text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center gap-1">
+                 <Grip size={14} /> Show All
+              </button>
+              
+              <button 
+                onClick={() => currentPage && setEditingPageId(currentPage.id)} 
+                disabled={!currentPage} 
+                className="bg-slate-900 text-white px-6 py-2 rounded-full shadow-lg active:scale-95 transition-all text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+              >
+                 Edit Page
+              </button>
+           </div>
         </div>
-      </div>
-
-      <div className="pb-safe pt-4 bg-transparent text-center z-30 mb-8">
-         <button onClick={() => currentPage && setEditingPageId(currentPage.id)} disabled={!currentPage} className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-full shadow-lg active:scale-95 transition-all hover:bg-slate-800 disabled:opacity-0">
-            <span className="font-serif italic text-lg tracking-wide">Edit Page</span>
-         </button>
-      </div>
+      )}
     </div>
   );
 };

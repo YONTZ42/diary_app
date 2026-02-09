@@ -24,7 +24,7 @@ export const CalendarDayPreviewArea: React.FC<CalendarDayPreviewAreaProps> = ({
   if (!date) return null;
 
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
+ 
   return (
     <AnimatePresence>
       <motion.div

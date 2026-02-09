@@ -77,7 +77,7 @@ export const StickerEditor: React.FC<StickerEditorProps> = ({ isOpen, sticker, o
              style={{ filter: generateFilterStyle() }} // ★ここでCSSフィルターを適用
           >
             <Image
-              src={getAssetUrl(sticker.png)}
+              src={sticker.imageUrl || '/placeholder.png'}
               alt="preview"
               fill
               className="object-contain"

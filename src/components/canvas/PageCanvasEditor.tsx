@@ -6,8 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Grid3X3, Type, PenTool, Calendar as CalendarIcon, X } from 'lucide-react';
 import { Page } from '@/types/schema';
 import { mapAssetsToExcalidrawFiles, extractPageDataFromExcalidraw } from '@/utils/excalidrawMapper';
+import { useExcalidrawFiles } from '@/hooks/useExcalidrawFiles';
+import { CanvasEditorPanel } from '@/components/canvas/CanvasEditorPanel';
+
 // Previewコンポーネントのインポート
 import { PageCanvasPreview } from './PageCanvasPreview';
+
 
 const Excalidraw = dynamic(
   () => import("@excalidraw/excalidraw").then((m) => m.Excalidraw),
@@ -77,89 +81,6 @@ const TextEditorPanel = ({ pageData, onChange, onClose }: any) => {
           </div>
         </div>
       </motion.div>
-    </div>
-  );
-};
-
-// --- CanvasEditorPanel ---
-const CanvasEditorPanel = ({ initialSceneData, initialAssets, onSaveScene, onClose }: any) => {
-  const [gridOn, setGridOn] = useState(true);
-  const [api, setApi] = useState<any>(null);
-  
-  const initialData = useMemo(() => {
-    const rawElements = initialSceneData?.elements || [];
-    const withFrame = ensureFrame(rawElements);
-    return {
-      elements: withFrame.elements,
-      appState: { ...initialSceneData?.appState, viewBackgroundColor: "#fafafa", collaborators: new Map() },
-      files: mapAssetsToExcalidrawFiles(initialAssets),
-    };
-  }, [initialSceneData, initialAssets]);
-
-  const draftRef = useRef<any>(initialData);
-
-  useEffect(() => {
-    if (api) fitToFrame(api, initialData.elements);
-  }, [api, initialData]);
-
-  const handleDone = () => {
-    if (!api) { onClose(); return; }
-    const elements = api.getSceneElements();
-    const appState = api.getAppState();
-    const files = api.getFiles();
-    const extracted = extractPageDataFromExcalidraw(elements, appState, files);
-    const ensured = ensureFrame(extracted.sceneData.elements ?? []);
-    onSaveScene(
-      { elements: ensured.elements, appState: { viewBackgroundColor: extracted.sceneData.appState?.viewBackgroundColor, collaborators: new Map() } },
-      extracted.assets
-    );
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-[#F9F8F6] flex flex-col">
-      {/* Editor Header */}
-      <div className="px-6 py-3 flex items-center justify-between border-b border-gray-100 bg-white shadow-sm shrink-0 z-20">
-        <div className="flex items-center gap-4">
-           <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 text-gray-500"><X size={20} /></button>
-           <div className="flex flex-col">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Editing Canvas</span>
-           </div>
-        </div>
-        <div className="flex items-center gap-3">
-           <button type="button" onClick={() => setGridOn(v => !v)} className={`flex items-center gap-2 px-3 py-2 rounded-full transition-colors ${gridOn ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
-             <Grid3X3 size={14} /><span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Grid</span>
-           </button>
-           <button onClick={handleDone} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2 rounded-full active:scale-95 transition-all shadow-md hover:bg-slate-800">
-             <span className="text-[10px] font-bold uppercase tracking-widest">Done</span><Check size={16} />
-           </button>
-        </div>
-      </div>
-
-      {/* Editor Body */}
-      <div className="flex-1 w-full h-full relative overflow-hidden p-4">
-        <div className="w-full h-full rounded-2xl overflow-hidden shadow-sm border border-gray-200 bg-white relative">
-          <Excalidraw
-            initialData={initialData as any}
-            excalidrawAPI={(apiObj: any) => setApi(apiObj)}
-            theme="light"
-            gridModeEnabled={gridOn}
-            // ★重要: 編集可能にする設定
-            viewModeEnabled={false}
-            zenModeEnabled={false} 
-            onChange={(elements: any, appState: any, files: any) => {
-              const ensured = ensureFrame(elements);
-              draftRef.current = { elements: ensured.elements, appState, files };
-            }}
-            UIOptions={{
-              canvasActions: {
-                toggleTheme: false, changeViewBackgroundColor: true, clearCanvas: true,
-                export: false, saveAsImage: false, loadScene: false,
-              }
-            }}
-          />
-        </div>
-      </div>
     </div>
   );
 };

@@ -1,14 +1,16 @@
-// utils/excalidrawMapper.ts
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type { ExcalidrawElement, ExcalidrawImageElement } from "@excalidraw/excalidraw/element/types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 import { Page, AssetRef } from "@/types/schema";
 
-// ... (mapAssetsToExcalidrawFiles はそのまま) ...
-
+// 読み込み用: AssetRef -> Excalidraw BinaryFiles
 export const mapAssetsToExcalidrawFiles = (assets: Record<string, AssetRef>) => {
   const files: Record<string, any> = {};
   
+  if (!assets) return files;
+
   Object.entries(assets).forEach(([id, asset]) => {
+    // S3 (remote) の場合はURLを、localの場合はBase64などをそのまま渡す
+    // Excalidrawは http... から始まるURLを自動でフェッチして表示できる
     files[id] = {
       id,
       dataURL: asset.key, 
@@ -21,10 +23,7 @@ export const mapAssetsToExcalidrawFiles = (assets: Record<string, AssetRef>) => 
   return files;
 };
 
-/**
- * ExcalidrawのデータからPageの形式へ戻す（保存時用）
- * Excalidrawの files (BinaryFiles) を Page.assets (AssetRef) に変換します。
- */
+// 保存用: Excalidraw BinaryFiles -> AssetRef
 export const extractPageDataFromExcalidraw = (
   elements: readonly ExcalidrawElement[],
   appState: any,
@@ -33,20 +32,33 @@ export const extractPageDataFromExcalidraw = (
   
   const assets: Record<string, AssetRef> = {};
 
-  // Excalidrawのfilesオブジェクトを走査
-  Object.entries(files).forEach(([fileId, binaryFile]) => {
-    // データURL (Base64) が存在する場合のみ保存
-    if (binaryFile.dataURL) {
-      assets[fileId] = {
-        kind: 'local', // ローカル保存扱い
-        key: binaryFile.dataURL, // MVPではBase64文字列をそのままkeyに入れる(localStorage容量注意)
-        mime: binaryFile.mimeType,
-        width: undefined, // 必要なら画像ロードして取得だが、一旦省略
-        height: undefined,
-        createdAt: new Date().toISOString(), // AssetRefLiteにはないが拡張用
-        updatedAt: new Date().toISOString()
-      } as AssetRef;
+  // 1. 使用されている fileId のセットを作成
+  const usedFileIds = new Set<string>();
+  elements.forEach(element => {
+    if (element.type === 'image' && !element.isDeleted) {
+      const imgEl = element as ExcalidrawImageElement;
+      if (imgEl.fileId) {
+        usedFileIds.add(imgEl.fileId);
+      }
     }
+  });
+
+  // 2. 使用されているファイルのみを assets に登録
+  Object.entries(files).forEach(([fileId, binaryFile]) => {
+    // 削除済み、またはキャンバス上に存在しない画像は保存しない
+    if (!usedFileIds.has(fileId)) return;
+    
+    if (!binaryFile.dataURL) return;
+
+    const dataURL = binaryFile.dataURL;
+    const isRemote = dataURL.startsWith('http');
+
+    assets[fileId] = {
+      kind: isRemote ? 'remote' : 'local',
+      key: dataURL,
+      mime: binaryFile.mimeType,
+      // ...
+    } as AssetRef;
   });
 
   return {

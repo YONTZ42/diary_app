@@ -7,6 +7,7 @@ import { CalendarDayPreviewArea } from '@/components/calendar/CalendarDayPreview
 import { MOCK_CALENDAR_PAGES } from '@/utils/dummyCalendar';
 import { Page } from '@/types/schema';
 import { PageCanvasEditor } from '@/components/canvas/PageCanvasEditor';
+import { fetchPages, fetchPagesByDate, createPage, updatePage} from '@/services/api';
 
 export const CalendarFeature = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -17,24 +18,81 @@ export const CalendarFeature = () => {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
-  const handleDayClick = (day: number) => {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const targetDate = new Date(year, month - 1, day);
-    const pages = MOCK_CALENDAR_PAGES.filter(p => p.date === dateStr);
-    setSelectedDate(targetDate);
-    setSelectedDatePages(pages);
-  };
+const handleDayClick = async (day: number) => { // 1. asyncを付ける
+  const targetDate = new Date(year, month-1, day);
+  setSelectedDate(targetDate);
+
+
+  try {
+    // 2. await でデータの取得を待つ
+    const pages = await fetchPagesByDate({ year, month, day });
+    
+    console.log("Pages for selected date:", pages);
+    
+    // 3. 取得したデータをステートに格納
+    setSelectedDatePages(Array.isArray(pages) ? pages : []);
+  } catch (error) {
+    console.error("Failed to fetch pages:", error);
+    setSelectedDatePages([]); // エラー時は空にする
+  }
+};
 
   const handleCreateNew = () => {
     if (!selectedDate) return;
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const selectedyear = selectedDate.getFullYear();
+    const selectedmonth = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
+    const selectedday = selectedDate.getDate().toString().padStart(2, "0");
+    const dateStr = `${selectedyear}-${selectedmonth}-${selectedday}`;
     const newPage: Page = {
-      id: `diary-${dateStr}-${Date.now()}`, type: 'diary', date: dateStr, title: '', note: '',
-      sceneData: {}, assets: {}, usedStickerIds: [], preview: { kind: 'local', key: '', mime: '' },
-      schemaVersion: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      // 一時IDであることを明確にする（保存ロジックで判定するため）
+      id: `diary-${dateStr}-${Date.now()}`, 
+      type: 'diary', 
+      date: dateStr, 
+      title: '', note: '',
+      sceneData: { elements: [], appState: { viewBackgroundColor: "#fafafa" } }, 
+      assets: {}, usedStickerIds: [], 
+      preview: { kind: 'local', key: '', mime: '' },
+      schemaVersion: 1, 
+      createdAt: new Date().toISOString(), 
+      updatedAt: new Date().toISOString(),
     };
     setEditorPage(newPage);
   };
+
+
+    const handleSave = async (updatedPage: Partial<Page>) => {
+    if (!editorPage) return;
+
+    try {
+      let savedPage: Page;
+
+      // IDが 'temp-' で始まるか、DBに存在しないと判断できる場合は新規作成
+      // ここでは簡易的に editorPage.id が `diary-...` (一時ID) かどうかで判断
+      if (editorPage.id.startsWith('diary-')) {
+        // 新規作成 (NotebookIDは任意。カレンダーからの作成なので指定なしでもOKだが、
+        // デフォルトNotebookがあるならそのIDを渡すのがベター)
+        savedPage = await createPage(updatedPage);
+      } else {
+        // 更新
+        savedPage = await updatePage(editorPage.id, updatedPage);
+      }
+
+      // UI更新: リストに追加または置換
+      setSelectedDatePages(prev => {
+        const exists = prev.find(p => p.id === savedPage.id);
+        if (exists) {
+          return prev.map(p => p.id === savedPage.id ? savedPage : p);
+        } else {
+          return [...prev, savedPage];
+        }
+      });
+
+      setEditorPage(null); // エディタを閉じる
+    } catch (error) {
+      console.error("Failed to save page:", error);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-[#F2F0E9] pb-32 flex flex-col items-center">
@@ -63,7 +121,7 @@ export const CalendarFeature = () => {
 
       {editorPage && (
         <div className="fixed inset-0 z-[100] bg-white">
-          <PageCanvasEditor initialPage={editorPage} onSave={() => setEditorPage(null)} onClose={() => setEditorPage(null)} />
+          <PageCanvasEditor initialPage={editorPage} onSave={handleSave} onClose={() => setEditorPage(null)} />
         </div>
       )}
     </div>

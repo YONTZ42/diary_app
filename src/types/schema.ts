@@ -45,7 +45,6 @@ export interface AssetRefLite {
 export interface AssetRef extends AssetRefLite {
   size?: number; // bytes
   filename?: string; // ダウンロード時のファイル名保存用
-  
   // レンダリング最適化用のバリエーション
   variants?: {
     thumb?: AssetRefLite; // 一覧表示用 (例: 300px)
@@ -92,7 +91,8 @@ export interface Sticker extends EntityBase {
 
   // 画像データ
   png: AssetRef; // 切り抜かれた背景透過PNG（実体）
-  
+  imageUrl?: string; // フルURL（remoteの場合のみ。localでは不要）
+
   // UI表示用キャッシュ（一覧での高速化）
   thumb?: AssetRefLite; 
   
@@ -154,6 +154,42 @@ export interface Page extends EntityBase {
     updatedAt: ISO8601; // 最終書き出し日時（scene更新と比較して古ければ再生成）
   };
 }
+
+export type ScheduleType = 'monthly' | 'weekly' | 'daily';
+/**
+ * ハーフシートで編集する予定リストのアイテム
+ */
+export interface ScheduleEvent {
+  id: string; // uuid
+  text: string;
+  isCompleted: boolean;
+  time?: string; // "14:00" など（任意）
+  color?: string; // マーカー色など（任意）
+}
+
+/**
+ * 日付ごとのイベントリスト
+ * key: "YYYY-MM-DD"
+ */
+export type ScheduleEventsMap = Record<string, ScheduleEvent[]>;
+
+export interface Schedule extends EntityBase {
+  type: ScheduleType;
+  startDate: YYYYMMDD; // "2024-02-01" (月なら1日、週なら日曜/月曜)
+  title?: string;
+
+  // Excalidraw (盤面)
+  sceneData: any;
+  assets: Record<string, AssetRef>;
+
+  // テキストリストデータ (ハーフシート)
+  // フロントエンドでは日付をキーにしてアクセスしやすくする
+  eventsData: ScheduleEventsMap;
+
+  // プレビュー
+  preview?: AssetRef;
+}
+
 
 // ------------------------------------------------------------------
 // 4. Notebook (ジャンル別アーカイブ)

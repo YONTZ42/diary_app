@@ -10,35 +10,46 @@ import { FriendsFeature } from '@/features/friends/FriendsFeature';
 import { ScheduleFeature } from '@/features/schedule/ScheduleFeature';
 import { CalendarFeature } from '@/features/calendar/CalendarFeature';
 
+// ★修正: Viewコンポーネントを関数の外に出す、または直接divを使う
+// ここではシンプルに直接記述するスタイルに変更
+
 export default function AppPage() {
   const [currentTab, setCurrentTab] = useState<TabId>('diary');
-  // ★削除: currentMode はもう管理しない
 
   const handleSwitchTab = (tab: TabId) => {
     setCurrentTab(tab);
   };
 
-  const View = ({ id, children }: { id: TabId; children: React.ReactNode }) => (
-    <div 
-      style={{ display: currentTab === id ? 'block' : 'none' }} 
-      className="w-full h-full min-h-screen"
-    >
-      {children}
-    </div>
-  );
-
   return (
     <>
-      <View id="diary"><DiaryFeature /></View>
-      <View id="stickers"><StickersFeature /></View>
-      <View id="friends"><FriendsFeature /></View>
-      <View id="schedule"><ScheduleFeature /></View>
-      <View id="calendar"><CalendarFeature /></View>
+      {/* 
+         各Featureを常にレンダリングしておき、CSSで表示/非表示を切り替える。
+         keyを指定しないことで、Reactは「同じdiv」として扱い、中身の再マウントを防ぐ。
+      */}
+      
+      <div style={{ display: currentTab === 'diary' ? 'block' : 'none' }} className="w-full h-full min-h-screen">
+        <DiaryFeature />
+      </div>
+      
+      <div style={{ display: currentTab === 'stickers' ? 'block' : 'none' }} className="w-full h-full min-h-screen">
+        <StickersFeature />
+      </div>
+      
+      <div style={{ display: currentTab === 'friends' ? 'block' : 'none' }} className="w-full h-full min-h-screen">
+        <FriendsFeature />
+      </div>
+      
+      <div style={{ display: currentTab === 'schedule' ? 'block' : 'none' }} className="w-full h-full min-h-screen">
+        <ScheduleFeature isActive={currentTab === 'schedule'} />
+      </div>
+      
+      <div style={{ display: currentTab === 'calendar' ? 'block' : 'none' }} className="w-full h-full min-h-screen">
+        <CalendarFeature />
+      </div>
 
       <AppFooter
         currentTab={currentTab}
         onSwitchTab={handleSwitchTab}
-        // ★削除: currentMode, onSwitchMode は渡さない
       />
     </>
   );
