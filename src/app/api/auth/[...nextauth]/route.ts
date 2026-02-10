@@ -51,8 +51,13 @@ console.log("--- Login Attempt Start ---");
       }
     })
   ],
+// 1. セッションの設定（コールバックの外側に置く）
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30日間
+  },
   callbacks: {
-    // JWTコールバック: トークンにアクセストークンを埋め込む
+    // 2. JWTコールバック
     async jwt({ token, user }) {
       if (user) {
         token.accessToken = user.accessToken;
@@ -60,7 +65,7 @@ console.log("--- Login Attempt Start ---");
       }
       return token;
     },
-    // セッションコールバック: フロントからアクセスできるようにする
+    // 3. セッションコールバック（ここには strategy は書かない）
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       return session;
