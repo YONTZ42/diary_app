@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Grid3X3, Type, PenTool, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Check, Grid3X3, Type, PenTool, Calendar as CalendarIcon, X, Trash2 } from 'lucide-react';
 import { Page } from '@/types/schema';
 import { mapAssetsToExcalidrawFiles, extractPageDataFromExcalidraw } from '@/utils/excalidrawMapper';
 import { useExcalidrawFiles } from '@/hooks/useExcalidrawFiles';
@@ -91,10 +91,12 @@ interface PageCanvasEditorProps {
   focusTarget?: 'meta' | 'canvas';
   onSave: (updatedPage: Partial<Page>) => void;
   onClose?: () => void;
+  onDelete?: (pageId: string) => void; // ★追加
+
 }
 
 const PageCanvasEditorBase: React.FC<PageCanvasEditorProps> = ({ 
-  initialPage, focusTarget = 'canvas', onSave, onClose
+  initialPage, focusTarget = null, onSave, onClose, onDelete
 }) => {
   const [metaData, setMetaData] = useState({ title: initialPage.title || "", note: initialPage.note || "", date: initialPage.date });
   const [sceneData, setSceneData] = useState(initialPage.sceneData);
@@ -115,15 +117,40 @@ const PageCanvasEditorBase: React.FC<PageCanvasEditorProps> = ({
     onClose?.();
   };
 
+    const handleDelete = () => {
+    if (!onDelete) return;
+    if (window.confirm("Are you sure you want to delete this page?")) {
+      onDelete(initialPage.id);
+      onClose?.();
+    }
+  };
+
+
   const previewPage = useMemo(() => ({
      ...initialPage, ...metaData, sceneData, assets: assetsData, updatedAt: new Date().toISOString()
   }), [initialPage, metaData, sceneData, assetsData, updateCount]);
+
+
 
   return (
     <>
       <div className="h-full flex flex-col bg-gray-50">
         <div className="px-4 py-3 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm z-10">
-           <button onClick={onClose} className="text-sm font-medium text-gray-500 hover:text-gray-800">Close</button>
+           <div className="flex items-center gap-2">
+             <button onClick={onClose} className="text-sm font-medium text-gray-500 hover:text-gray-800 px-2 py-1">Close</button>
+             {/* ★追加: 削除ボタン */}
+             {onDelete && (
+               <button 
+                 onClick={handleDelete}
+                 className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                 title="Delete Page"
+               >
+                 <Trash2 size={18} />
+               </button>
+             )}
+           </div>
+
+
            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Preview</span>
            <button onClick={handleFinalSave} className="text-sm font-bold text-blue-600 hover:text-blue-800">Save All</button>
         </div>

@@ -58,12 +58,17 @@ console.log("Session Token:", token);
     ...options,
     headers,
     credentials:'omit',
+    cache:'no-store',
 
   });
 
   if (response.status === 401) {
     // 認証エラー処理 (必要に応じて)
     throw new Error('Unauthorized');
+  }
+
+  if (response.status === 204) {
+    return null as T;
   }
 
   if (!response.ok) {
@@ -122,6 +127,13 @@ export const updatePage = async (id: string, data: Partial<Page>): Promise<Page>
     body: JSON.stringify(body),
   });
 };
+
+export const deletePage = async (id: string): Promise<void> => {
+  return fetchAPI<void>(`/pages/${id}/`, {
+    method: 'DELETE',
+  });
+};
+
 
 /**
  * 指定したNotebookに含まれるPage一覧を取得する

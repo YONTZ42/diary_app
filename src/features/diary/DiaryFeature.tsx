@@ -6,7 +6,7 @@ import { BookReader } from '@/components/diary/BookReader';
 import { Notebook, Page } from '@/types/schema';
 import { NotebookCreator } from '@/components/diary/NotebookCreator';
 import { PlusIcon } from '@heroicons/react/24/solid';
-import { fetchNotebooks, createPage, updatePage, fetchPagesInNotebook } from '@/services/api';
+import { fetchNotebooks, createPage, updatePage, fetchPagesInNotebook, deletePage } from '@/services/api';
 import { Loader2 } from 'lucide-react';
 
 const uuid = () => Math.random().toString(36).substring(2, 9);
@@ -116,6 +116,24 @@ export const DiaryFeature = () => {
     }
   };
 
+  const handleDeletePage = async (pageId: string) => {
+    // 1. ローカルStateから削除
+    // BookReader内のページリストから削除する
+    setActivePages(prev => prev.filter(p => p.id !== pageId));
+    
+    // 2. APIで削除
+    try {
+      await deletePage(pageId);
+      console.log(`API call to delete page ${pageId} would go here.`);
+      // 成功したらBookReaderを閉じるか、そのまま
+      // setEditingPageId(null); // BookReader側で閉じる処理が必要
+    } catch (error) {
+      console.error("Failed to delete page:", error);
+      // 失敗したらロールバック（再取得など）
+    }
+  };
+
+
   // --- Render ---
 
   if (loadingShelf) {
@@ -145,6 +163,7 @@ export const DiaryFeature = () => {
         onClose={handleCloseBook}
         onUpdatePage={handleUpdatePage}
         onCreatePage={handleCreatePage}
+        onDeletePage={handleDeletePage}
       />
     );
   }
