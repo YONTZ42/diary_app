@@ -22,7 +22,7 @@ jobs:
         with:
           repository: YONTZ42/web-diary-backend
           token: ${{ secrets.BACKEND_REPO_PAT }} # 事前に作成したPAT
-          path: temp-backend
+          path: .
           sparse-checkout: |
             types/api-types.ts  # ← バックエンド内のファイルパス
 
