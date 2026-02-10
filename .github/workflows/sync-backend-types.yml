@@ -1,0 +1,36 @@
+name: Sync API Types from Backend
+
+on:
+  workflow_dispatch: # 手動実行用ボタン
+
+jobs:
+  copy-types:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. フロントエンドのリポジトリをチェックアウト
+      - name: Checkout Frontend
+        uses: actions/checkout@v4
+
+      # 2. バックエンドのリポジトリを「特定のファイルだけ」取得するためにチェックアウト
+      # sparse-checkout を使うと、リポジトリ全体ではなく特定のファイルだけ落とせて高速です
+      - name: Checkout Backend Files
+        uses: actions/checkout@v4
+        with:
+          repository: YONTZ42/web-diary-backend
+          token: ${{ secrets.BACKEND_REPO_PAT }} # 事前に作成したPAT
+          path: temp-backend
+          sparse-checkout: |
+            types/api-types.ts  # ← バックエンド内のファイルパス
+
+      # 3. ファイルを移動
+      - name: Move File
+        run: |
+          mkdir -p src/types/from_backend
+          cp temp-backend/types/api-types.ts src/types/from_backend/api-types.ts
+
+      # 4. フロントエンドのリポジトリに反映
+      - name: Commit and Push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: update api types from backend"
+          file_pattern: 'src/types/from_backend/api-types.ts'
