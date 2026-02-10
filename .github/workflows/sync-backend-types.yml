@@ -4,8 +4,9 @@ on:
   workflow_dispatch: # 手動実行用ボタン
   
 push:
-    branches: [ main ] # push時に自動で動かしたい場合はこれが必要
-    
+  branches:
+    - main # push時に自動で動かしたい場合はこれが必要
+
 jobs:
   copy-types:
     runs-on: ubuntu-latest
