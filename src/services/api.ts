@@ -22,8 +22,11 @@ const sanitizePageData = (data: Partial<Page>): Record<string, any> => {
 
 
 
+interface FetchOptions extends RequestInit {
+  skipAuth?: boolean; // 追加
+}
 
-async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function fetchAPI<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const session = await getSession();
   const token = session?.accessToken;
 
@@ -40,6 +43,12 @@ console.log("Session Token:", token);
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
+  if (!options.skipAuth) { // スキップ指示がなければトークン付与
+    const session = await getSession();
+    const token = session?.accessToken;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -244,3 +253,18 @@ export const createSticker = async (s3Key: string, width: number, height: number
     body: JSON.stringify(body),
   });
 };
+
+interface RegisterParams {
+  email: string;
+  password: string;
+  displayName?: string;
+}
+
+export const registerUser = async (params: RegisterParams) => {
+  return fetchAPI('/auth/register/', {
+    method: 'POST',
+    body: JSON.stringify(params),
+    skipAuth: true, // トークン不要
+  });
+};
+
