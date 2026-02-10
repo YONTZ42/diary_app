@@ -30,6 +30,7 @@ export const FriendsFeature = () => {
         <BookReader
           notebook={readingNotebook} initialPages={readingPages} onClose={() => setReadingNotebook(null)}
           onUpdatePage={() => {}} onCreatePage={() => {}}
+          onDeletePage={  () => {}}
         />
       )}
     </div>
