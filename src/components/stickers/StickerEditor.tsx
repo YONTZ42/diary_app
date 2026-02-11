@@ -25,7 +25,10 @@ export const StickerEditor: React.FC<StickerEditorProps> = ({ isOpen, sticker, o
   // ステッカーが開かれるたびに初期値をセット
   useEffect(() => {
     if (sticker) {
-      setStyle(sticker.style);
+      setStyle(prev => ({
+        ...prev,
+        outline: { ...prev.outline, enabled: true },
+}));
     }
   }, [sticker]);
 
@@ -77,7 +80,7 @@ export const StickerEditor: React.FC<StickerEditorProps> = ({ isOpen, sticker, o
              style={{ filter: generateFilterStyle() }} // ★ここでCSSフィルターを適用
           >
             <Image
-              src={sticker.imageUrl || '/placeholder.png'}
+              src={getAssetUrl(sticker.png)}
               alt="preview"
               fill
               className="object-contain"

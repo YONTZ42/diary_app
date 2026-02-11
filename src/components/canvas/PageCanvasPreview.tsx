@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import clsx from "clsx";
 import { Grid3X3 } from "lucide-react";
 import { Page } from "@/types/schema";
-import { mapAssetsToExcalidrawFiles } from "@/utils/excalidrawMapper";
+import {prepareExcalidrawData} from "@/utils/excalidrawMapper";
+const FRAME_ID = "__PAGE_FRAME__";
+
 
 // --- Excalidraw Dynamic Import ---
 // SSRなしで読み込む
@@ -14,53 +16,6 @@ const Excalidraw = dynamic(
   { ssr: false }
 );
 
-// --- Constants ---
-const FRAME_ID = "__PAGE_FRAME__";
-const FRAME_W = 900;
-const FRAME_H = 1200;
-
-// データを整形する関数
-function prepareExcalidrawData(page: Page) {
-  const rawElements = page.sceneData?.elements || [];
-  
-  // フレームがあるか確認、なければ追加
-  let elements = rawElements;
-  const hasFrame = elements.find((el: any) => el?.id === FRAME_ID && !el?.isDeleted);
-  
-  if (!hasFrame) {
-    const frame = {
-      type: "rectangle",
-      id: FRAME_ID,
-      x: 0, y: 0, width: FRAME_W, height: FRAME_H,
-      angle: 0, strokeColor: "#e5e7eb", backgroundColor: "transparent",
-      fillStyle: "solid", strokeWidth: 2, strokeStyle: "solid",
-      roughness: 0, opacity: 100, locked: true,
-      version: 1, isDeleted: false,
-    };
-    elements = [frame, ...elements];
-  } else {
-    // 既存フレームのスタイルを強制
-    elements = elements.map((el: any) => {
-        if (el.id === FRAME_ID) {
-            return { ...el, width: FRAME_W, height: FRAME_H, locked: true, strokeColor: "#e5e7eb" };
-        }
-        return el;
-        
-    });
-  }
-
-  return {
-    elements,
-    appState: {
-      ...(page.sceneData?.appState || {}),
-      collaborators: new Map(), 
-
-      viewBackgroundColor: "#fafafa",
-      scrollX: 0, scrollY: 0, zoom: { value: 0.5 } // 初期ズームを仮設定
-    },
-    files: mapAssetsToExcalidrawFiles(page.assets || {}),
-  };
-}
 
 interface PageCanvasPreviewProps {
   page: Page;
@@ -93,12 +48,13 @@ export const PageCanvasPreview: React.FC<PageCanvasPreviewProps> = ({
 
   // 自動フィット処理
   useEffect(() => {
-    if (!api || !initialData.elements) return;
+      const elements = initialData.elements ?? [];
+    if (!api || !elements.length) return;
 
     // 少し遅延させて確実にレンダリング後にフィットさせる
     const timer = setTimeout(() => {
-        const frame = initialData.elements.find((el: any) => el.id === FRAME_ID);
-        const target = frame ? [frame] : initialData.elements;
+        const frame = elements.find((el: any) => el.id === FRAME_ID);
+        const target = frame ? [frame] : elements;
         
         if (target.length > 0) {
             api.scrollToContent(target, { 

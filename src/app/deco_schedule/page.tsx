@@ -65,6 +65,7 @@ export default function SchedulePage({ isActive }: ScheduleFeatureProps) {
           : generateWeekTemplate(date);
 
         const tempSchedule: Schedule = {
+          owner: "default-user", // 仮の所有者ID
           id: `temp-${startDate}`, // 一時ID
           type,
           startDate,

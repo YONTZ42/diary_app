@@ -113,18 +113,20 @@ export const CanvasEditorPanel: React.FC<CanvasEditorPanelProps> = ({
     
     // データ抽出とフレーム保証（assetsのクリーンアップも含む）
     const extracted = extractPageDataFromExcalidraw(elements, appState, savedFiles);
-    const ensured = ensureFrame(extracted.sceneData.elements ?? []);
-    
+    const ensured = ensureFrame(extracted.sceneData.elements ?? [] );
+        
     onSaveScene(
-      { 
-        elements: ensured.elements, 
-        appState: { 
-          viewBackgroundColor: extracted.sceneData.appState?.viewBackgroundColor, 
-          collaborators: new Map() 
-        } 
+      {
+        ...extracted.sceneData,
+        elements: ensured.elements,
+        appState: {
+          ...(extracted.sceneData.appState ?? {}),
+          collaborators: new Map(),
+        },
       },
       extracted.assets
     );
+
     onClose();
   };
 

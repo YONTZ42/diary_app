@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
 
   // 画像ドメインの許可設定を追加
   images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',

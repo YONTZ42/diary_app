@@ -9,6 +9,7 @@ import { Page } from '@/types/schema';
 import { PageCanvasEditor } from '@/components/canvas/PageCanvasEditor';
 import { fetchPages, fetchPagesByDate, createPage, updatePage} from '@/services/api';
 
+
 export const CalendarFeature = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -44,6 +45,7 @@ const handleDayClick = async (day: number) => { // 1. asyncを付ける
     const selectedday = selectedDate.getDate().toString().padStart(2, "0");
     const dateStr = `${selectedyear}-${selectedmonth}-${selectedday}`;
     const newPage: Page = {
+      owner: "default-user", // 仮の所有者ID
       // 一時IDであることを明確にする（保存ロジックで判定するため）
       id: `diary-${dateStr}-${Date.now()}`, 
       type: 'diary', 

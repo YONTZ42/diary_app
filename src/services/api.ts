@@ -1,5 +1,6 @@
 import { getSession } from "next-auth/react";
 import { Notebook, Page, Sticker,Schedule } from '@/types/schema';
+import { mime } from "zod";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.memocho.link/api';
@@ -18,6 +19,51 @@ const sanitizePageData = (data: Partial<Page>): Record<string, any> => {
   // 他にあれば追加
 
   return sanitized;
+};
+
+
+// --- Uploads (S3 Presigned) ---
+
+interface UploadIssueResponse {
+  uploadUrl: string;
+  s3Key: string;
+  uploadSessionId: string;
+}
+
+// 1. Presigned URLの発行
+export const issueUpload = async (filename: string, mimeType: string, purpose: string): Promise<UploadIssueResponse> => {
+  return fetchAPI<UploadIssueResponse>('/uploads/issue/', {
+    method: 'POST',
+    body: JSON.stringify({
+      filename: filename,
+      mime_type: mimeType,  // mimeType から mime_type に変更
+      purpose: purpose
+     }),
+  });
+};
+
+// 2. S3への直接アップロード (※これはDjangoを経由しない)
+export const uploadToS3 = async (uploadUrl: string, file: Blob, mimeType: string) => {
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: {
+      'Content-Type': mimeType,
+    },
+  });
+  if (!response.ok) {
+    throw new Error('S3 Upload Failed');
+  }
+};
+
+// 3. アップロード完了確認
+export const confirmUpload = async (uploadSessionId: string) => {
+  return fetchAPI('/uploads/confirm/', {
+    method: 'POST',
+    body: JSON.stringify({ 
+      upload_session_id: uploadSessionId // ここをスネークケースに変更
+     }),
+  });
 };
 
 
@@ -128,22 +174,6 @@ export const updatePage = async (id: string, data: Partial<Page>): Promise<Page>
   });
 };
 
-export const deletePage = async (id: string): Promise<void> => {
-  return fetchAPI<void>(`/pages/${id}/`, {
-    method: 'DELETE',
-  });
-};
-
-
-/**
- * 指定したNotebookに含まれるPage一覧を取得する
- * @param notebookId ノートブックのUUID
- */
-export const fetchPagesInNotebook = async (notebookId: string): Promise<Page[]> => {
-  return fetchAPI<Page[]>(`/notebooks/${notebookId}/pages/`);
-};
-
-
 export const createPage = async (data: Partial<Page>, notebookId?: string): Promise<Page> => {
   const body = { 
     ...data, 
@@ -154,6 +184,19 @@ export const createPage = async (data: Partial<Page>, notebookId?: string): Prom
     body: JSON.stringify(body),
   });
 };
+export const deletePage = async (id: string): Promise<void> => {
+  return fetchAPI<void>(`/pages/${id}/`, {
+    method: 'DELETE',
+  });
+};
+/**
+ * 指定したNotebookに含まれるPage一覧を取得する
+ * @param notebookId ノートブックのUUID
+ */
+export const fetchPagesInNotebook = async (notebookId: string): Promise<Page[]> => {
+  return fetchAPI<Page[]>(`/notebooks/${notebookId}/pages/`);
+};
+
 
 
 // --- Fetch Schedule ---
@@ -190,50 +233,6 @@ export const updateSchedule = async (id: string, data: Partial<Schedule>): Promi
 
 
 
-// --- Uploads (S3 Presigned) ---
-
-interface UploadIssueResponse {
-  uploadUrl: string;
-  s3Key: string;
-  uploadSessionId: string;
-}
-
-// 1. Presigned URLの発行
-export const issueUpload = async (filename: string, mimeType: string, purpose: string): Promise<UploadIssueResponse> => {
-  return fetchAPI<UploadIssueResponse>('/uploads/issue/', {
-    method: 'POST',
-    body: JSON.stringify({
-      filename: filename,
-      mime_type: mimeType,  // mimeType から mime_type に変更
-      purpose: purpose
-     }),
-  });
-};
-
-// 2. S3への直接アップロード (※これはDjangoを経由しない)
-export const uploadToS3 = async (uploadUrl: string, file: Blob, mimeType: string) => {
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: file,
-    headers: {
-      'Content-Type': mimeType,
-    },
-  });
-  if (!response.ok) {
-    throw new Error('S3 Upload Failed');
-  }
-};
-
-// 3. アップロード完了確認
-export const confirmUpload = async (uploadSessionId: string) => {
-  return fetchAPI('/uploads/confirm/', {
-    method: 'POST',
-    body: JSON.stringify({ 
-      upload_session_id: uploadSessionId // ここをスネークケースに変更
-     }),
-  });
-};
-
 // --- Stickers ---
 
 export const fetchStickers = async (): Promise<Sticker[]> => {
@@ -248,6 +247,7 @@ export const createSticker = async (s3Key: string, width: number, height: number
     key: s3Key,
     width,
     height,
+    mime: 'image/png',
   };
 
   const body = {

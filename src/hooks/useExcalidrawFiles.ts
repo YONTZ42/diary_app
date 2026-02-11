@@ -11,43 +11,33 @@ export const useExcalidrawFiles = () => {
   // アップロード済みファイルのキャッシュ (fileId -> remoteUrl)
   // これにより、同じファイルを再度アップロードするのを防ぐ
   const uploadedFilesRef = useRef<Map<string, string>>(new Map());
+  const uploadingFileIdsRef = useRef<Set<string>>(new Set());
 
-  // ファイル変更時のハンドラ
-  // Excalidrawの onChange 内で呼び出す
+  const markUploading = (fileId: string, uploading: boolean) => {
+    const next = new Set(uploadingFileIdsRef.current);
+    if (uploading) next.add(fileId);
+    else next.delete(fileId);
+    uploadingFileIdsRef.current = next;
+    setUploadingFileIds(next); // UI更新用
+  };
+
   const handleFilesChange = useCallback(async (files: Record<string, any>) => {
-    const newUploadingIds = new Set(uploadingFileIds);
-    let hasChanges = false;
-
     for (const [fileId, file] of Object.entries(files)) {
-      // 1. すでにアップロード済みならスキップ
       if (uploadedFilesRef.current.has(fileId)) continue;
-      
-      // 2. 現在アップロード中ならスキップ
-      if (newUploadingIds.has(fileId)) continue;
+      if (uploadingFileIdsRef.current.has(fileId)) continue;
 
-      // 3. ローカルファイル (dataURL) の場合のみ処理開始
-      if (file.dataURL && file.dataURL.startsWith('data:image')) {
-        // アップロード開始フラグを立てる
-        setUploadingFileIds(prev => new Set(prev).add(fileId));
-        hasChanges = true;
+      if (file.dataURL && file.dataURL.startsWith("data:image")) {
+        markUploading(fileId, true);
 
-        // 非同期でアップロード実行
         uploadImage(fileId, file).then((remoteUrl) => {
-          if (remoteUrl) {
-            uploadedFilesRef.current.set(fileId, remoteUrl);
-            // ここでExcalidrawのデータを直接書き換えるのは難しい（再レンダリングが必要）ため、
-            // 呼び出し元に通知するか、保存時に差し替える戦略をとる
-          }
-          // 完了したらフラグを下ろす
-          setUploadingFileIds(prev => {
-            const next = new Set(prev);
-            next.delete(fileId);
-            return next;
-          });
+          if (remoteUrl) uploadedFilesRef.current.set(fileId, remoteUrl);
+        }).finally(() => {
+          markUploading(fileId, false);
         });
       }
     }
-  }, [uploadingFileIds]);
+  }, []);
+
 
   // 単一ファイルのアップロード処理
   const uploadImage = async (fileId: string, file: any): Promise<string | null> => {

@@ -1,79 +1,65 @@
 import { Page } from '@/types/schema';
 
-// 画像URL生成ヘルパー
+// 画像生成ヘルパー
 const getImg = (text: string, color: string) => 
   `https://placehold.co/400x400/${color}/ffffff/png?text=${text}`;
 
-// 今月の日記データを作成
 const today = new Date();
 const year = today.getFullYear();
-const month = today.getMonth(); // 0-indexed
+const month = today.getMonth(); // 0-indexed (0=1月)
 
 export const MOCK_CALENDAR_PAGES: Page[] = [
   {
     id: 'cal-1',
     type: 'diary',
-    date: new Date(year, month, 3).toISOString().split('T')[0], // 3日
-    title: 'カフェ記録',
-    // プレビュー画像として、そのページで使った写真やステッカーのURLを持たせる
-    preview: { kind: 'remote', key: getImg('Coffee', '8D6E63'), mime: 'image/png' },
-    usedStickerIds: ['sticker-1'],
-    sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
+    // 3日
+    date: new Date(year, month, 3).toISOString().split('T')[0],
+    title: 'Cafe Time',
+    note: 'Delicious latte at the corner cafe.',
+    preview: { kind: 'remote', key: getImg('Cafe', '8D6E63'), mime: 'image/png' },
+    sceneData: { elements: [], appState: { viewBackgroundColor: '#fff' } },
+    assets: {}, usedStickerIds: [],
+    schemaVersion: 1, createdAt: '', updatedAt: '', owner: 'u1'
   },
   {
     id: 'cal-2',
     type: 'diary',
-    date: new Date(year, month, 5).toISOString().split('T')[0], // 5日
-    title: '映画',
-    preview: { kind: 'remote', key: getImg('Cinema', '212121'), mime: 'image/png' },
-    usedStickerIds: [],
-    sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
-  },
-  
-  {
-    id: 'cal-3-1', // 12日 1枚目
-    type: 'diary',
+    // 12日 (複数ある日の1つ目)
     date: new Date(year, month, 12).toISOString().split('T')[0],
-    title: '旅行 到着',
-    preview: { kind: 'remote', key: getImg('Travel 1', '0288D1'), mime: 'image/png' },
-    usedStickerIds: [], sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
+    title: 'Kyoto Trip Day 1',
+    preview: { kind: 'remote', key: getImg('Travel', '0288D1'), mime: 'image/png' },
+    sceneData: {}, assets: {}, usedStickerIds: [],
+    schemaVersion: 1, createdAt: '', updatedAt: '', owner: 'u1'
   },
   {
-    id: 'cal-3-2', // 12日 2枚目
+    id: 'cal-3',
     type: 'diary',
-    date: new Date(year, month, 12).toISOString().split('T')[0],
-    title: 'ホテルで夕食',
+    // 12日 (2つ目)
+    date: new Date(year, month, 15).toISOString().split('T')[0],
+    title: 'Dinner',
     preview: { kind: 'remote', key: getImg('Dinner', 'F57C00'), mime: 'image/png' },
-    usedStickerIds: [], sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
+    sceneData: {}, assets: {}, usedStickerIds: [],
+    schemaVersion: 1, createdAt: '', updatedAt: '', owner: 'u1'
   },
-
   {
     id: 'cal-4',
     type: 'diary',
-    date: new Date(year, month, 13).toISOString().split('T')[0], // 13日
-    title: '旅行2日目',
-    preview: { kind: 'remote', key: getImg('Hotel', '0097A7'), mime: 'image/png' },
-    usedStickerIds: [],
-    sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
+    // 20日
+    date: new Date(year, month, 20).toISOString().split('T')[0],
+    title: 'Cat Cafe',
+    preview: { kind: 'remote', key: getImg('Cat', 'F48FB1'), mime: 'image/png' },
+    sceneData: {}, assets: {}, usedStickerIds: [],
+    schemaVersion: 1, createdAt: '', updatedAt: '', owner: 'u1'
   },
   {
     id: 'cal-5',
     type: 'diary',
-    date: new Date(year, month, 20).toISOString().split('T')[0], // 20日
-    title: '猫カフェ',
-    preview: { kind: 'remote', key: getImg('Cat', 'F48FB1'), mime: 'image/png' },
-    usedStickerIds: [],
-    sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
-  },
-  {
-    id: 'cal-6',
-    type: 'diary',
-    date: new Date(year, month, 25).toISOString().split('T')[0], // 25日
-    title: '読書',
-    // 画像がない場合は preview が null または空文字の想定
-    preview: { kind: 'local', key: '', mime: '' }, 
-    note: '今日は文字だけの日記。',
-    usedStickerIds: [],
-    sceneData: {}, assets: {}, schemaVersion: 1, createdAt: '', updatedAt: '',
+    // 25日 (画像なし、テキストのみ)
+    date: new Date(year, month, 25).toISOString().split('T')[0],
+    title: 'Reading',
+    note: 'Finished a great book today.',
+    preview: { kind: 'local', key: '', mime: '' }, // 画像なし
+    sceneData: {}, assets: {}, usedStickerIds: [],
+    schemaVersion: 1, createdAt: '', updatedAt: '', owner: 'u1'
   },
 ];

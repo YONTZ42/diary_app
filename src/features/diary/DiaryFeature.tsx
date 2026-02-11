@@ -89,19 +89,18 @@ export const DiaryFeature = () => {
     const newPageData: Partial<Page> = {
       type: 'diary',
       date: new Date().toISOString().split('T')[0],
-      title: '',
+      title: 'New Page',
       note: '',
       sceneData: { elements: [], appState: { viewBackgroundColor: "#fafafa" } },
       assets: {},
       usedStickerIds: [],
-      preview: { kind: 'local', key: '', mime: 'image/png' },
     };
 
     try {
       const createdPage = await createPage(newPageData, notebookId);
       
       // 1. 開いている本に追加
-      setActivePages(prev => [createdPage, ...prev]); // 先頭に追加（API側もDESC順なら）
+      setActivePages(prev => [...prev,createdPage ]); // 先頭に追加（API側もDESC順なら）
 
       // 2. 棚の情報（ページ数など）も更新
       setNotebooks(prev => prev.map(nb => {

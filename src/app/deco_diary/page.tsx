@@ -11,8 +11,7 @@ import { Loader2 } from 'lucide-react';
 
 const uuid = () => Math.random().toString(36).substring(2, 9);
 
-export default function DiaryPage() {
-  // Notebooks (棚)
+export default function DiaryPage() {  // Notebooks (棚)
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   
   // 現在開いているNotebookのページ一覧

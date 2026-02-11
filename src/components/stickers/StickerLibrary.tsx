@@ -6,7 +6,6 @@ import { StickerGrid } from './StickerGrid';
 import { StickerTagFilter } from './StickerTagFilter';
 import { StickerEditor } from './StickerEditor';
 import { PhotoCutoutPanel } from './PhotoCutoutPanel';
-import { generateMockStickers } from '@/utils/dummyStickers'; // 追加
 import { Loader2 } from 'lucide-react'; // 追加
 
 interface StickerLibraryProps {
@@ -36,7 +35,7 @@ export const StickerLibrary: React.FC<StickerLibraryProps> = ({ initialStickers=
   // Filter Logic
   const filteredStickers = stickers.filter(s => {
     if (!selectedTag) return true;
-    return s.tags.includes(selectedTag);
+    return s.tags?.includes(selectedTag);
   });
 
   // Unique Tags
