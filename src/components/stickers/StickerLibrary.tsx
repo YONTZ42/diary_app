@@ -35,11 +35,11 @@ export const StickerLibrary: React.FC<StickerLibraryProps> = ({ initialStickers=
   // Filter Logic
   const filteredStickers = stickers.filter(s => {
     if (!selectedTag) return true;
-    return s.tags?.includes(selectedTag);
+    return (s.tags ?? []).includes(selectedTag);
   });
 
   // Unique Tags
-  const allTags = Array.from(new Set(stickers.flatMap(s => s.tags)));
+const allTags = Array.from(new Set(stickers.flatMap(s => s.tags ?? [])));
   
   console.log("png json", initialStickers);
 

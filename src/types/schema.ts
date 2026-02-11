@@ -8,7 +8,7 @@ export type YYYYMMDD = string; // "2024-01-30"
 
 
 // types/api.ts (新しく作る)
-import { components } from "./api-types";
+import { components } from "./from_backend/api-types";
 
 // よく使うスキーマを抽出
 export type AssetRef = components["schemas"]["AssetRef"];
