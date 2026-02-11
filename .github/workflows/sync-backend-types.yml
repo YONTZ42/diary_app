@@ -1,41 +1,49 @@
-name: Sync API Types from Backend
+name: Generate API Types from OpenAPI Schema
 
 on:
-  workflow_dispatch: # 手動実行用ボタン
-  push:              # 正しく「on」の中にインデントしました
+  workflow_dispatch:
+  push:
     branches:
       - main
 
 jobs:
-  copy-types:
+  generate-types:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # プッシュ権限を付与
+      contents: write
 
     steps:
-      # 1. フロントエンドのリポジトリをチェックアウト
       - name: Checkout Frontend
         uses: actions/checkout@v4
 
-      # 2. バックエンドからファイルだけ取得（temp-backendフォルダに保存）
-      - name: Checkout Backend Files
+      # 1. バックエンドから schema.yml だけを取得
+      - name: Checkout Backend Schema
         uses: actions/checkout@v4
         with:
           repository: YONTZ42/web-diary-backend
           token: ${{ secrets.BACKEND_REPO_PAT }}
-          path: temp-backend # ここを . にするとフロントが消えるので注意！
+          path: temp-backend
           sparse-checkout: |
-            types/api-types.ts
+            schema.yml  # バックエンドのリポジトリにあるスキーマファイル名に合わせてください
 
-      # 3. ファイルを適切な場所に移動
-      - name: Move File
+      # 2. Node.js のセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+
+      # 3. schema.yml を使って型定義を生成
+      - name: Generate Types
         run: |
           mkdir -p src/types/from_backend
-          cp temp-backend/types/api-types.ts src/types/from_backend/api-types.ts
+          # npx を使ってその場で生成
+          npx openapi-typescript temp-backend/schema.yml -o src/types/from_backend/api-types.ts
 
-      # 4. フロントエンドのリポジトリにコミットしてプッシュ
+      # 4. 生成されたファイルをコミットしてプッシュ
       - name: Commit and Push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: update api types from backend"
+          commit_message: "chore: update api types from openapi schema"
           file_pattern: 'src/types/from_backend/api-types.ts'
