@@ -5,8 +5,6 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Grid3X3, Type, PenTool, Calendar as CalendarIcon, X, Trash2 } from 'lucide-react';
 import { Page } from '@/types/schema';
-import { mapAssetsToExcalidrawFiles, extractPageDataFromExcalidraw } from '@/utils/excalidrawMapper';
-import { useExcalidrawFiles } from '@/hooks/useExcalidrawFiles';
 import { CanvasEditorPanel } from '@/components/canvas/CanvasEditorPanel';
 
 // Previewコンポーネントのインポート

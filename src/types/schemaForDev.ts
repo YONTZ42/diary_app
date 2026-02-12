@@ -169,6 +169,9 @@ export interface ScheduleEvent {
   color?: string; // マーカー色など（任意）
 }
 
+
+
+
 /**
  * 日付ごとのイベントリスト
  * key: "YYYY-MM-DD"
