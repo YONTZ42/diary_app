@@ -134,7 +134,7 @@ export const StickerEditorPanel: React.FC<StickerEditorPanelProps> = ({
               <Rect 
                 width={stageSize.w} 
                 height={stageSize.h} 
-                fillPatternImage={null} // 本当は画像ロード必要だが、CSSで代用可
+                fillPatternImage={undefined} // 本当は画像ロード必要だが、CSSで代用可
                 fill="#f4f4f5" // 背景色
               />
 
