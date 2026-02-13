@@ -110,7 +110,7 @@ export const StickerLibrary: React.FC<StickerLibraryProps> = ({ initialStickers 
         isOpen={isEditorOpen}
         imageBlob={tempBlob}
         manualPoints={tempPoints} // ★ポイントを渡す
-        onClose={() => setIsEditorOpen(false)}
+        onClose={() => {setIsEditorOpen(false); setIsUploading(false)}}
         onComplete={handleEditorComplete}
       />
     </div>
