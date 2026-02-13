@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { ScheduleNavigator, ViewMode } from '@/components/schedule/ScheduleNavigator';
-import { ScheduleCanvasPreview } from '@/components/schedule/ScheduleCanvasPreview';
-import { PageCanvasEditor } from '@/components/canvas/PageCanvasEditor';
+import { ScheduleNavigator, ViewMode } from '@/features/schedule/components/ScheduleNavigator';
+import { ScheduleEditor } from '@/features/schedule/components/ScheduleEditor';
+import { ScheduleCanvasPreview } from '@/features/schedule/components/ScheduleCanvasPreview';
 import { generateMonthTemplate, generateWeekTemplate } from '@/utils/scheduleTemplates';
 import { Schedule, ScheduleType } from '@/types/schema';
 import {fetchSchedule, createSchedule, updateSchedule} from '@/services/api';
-import { ScheduleEditor } from '@/components/schedule/ScheduleEditor';
-import { S } from 'node_modules/framer-motion/dist/types.d-a9pt5qxk';
 // 簡易DB (データ保持用)
 const MOCK_DB: Record<string, Schedule> = {};
 

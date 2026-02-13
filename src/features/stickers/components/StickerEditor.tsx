@@ -13,6 +13,7 @@ interface StickerEditorProps {
   sticker: Sticker | null;
   onClose: () => void;
   onSave: (style: StickerStyle) => void;
+  
 }
 
 export const StickerEditor: React.FC<StickerEditorProps> = ({ isOpen, sticker, onClose, onSave }) => {

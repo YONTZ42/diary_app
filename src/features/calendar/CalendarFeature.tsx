@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { CalendarGrid } from '@/components/calendar/CalendarGrid';
-import { CalendarDayPreviewArea } from '@/components/calendar/CalendarDayPreviewArea';
+import { CalendarGrid } from '@/features/calendar/components/CalendarGrid';
+import { CalendarDayPreviewArea } from '@/features/calendar/components/CalendarDayPreviewArea';
 import { MOCK_CALENDAR_PAGES } from '@/utils/dummyCalendar';
 import { Page } from '@/types/schema';
 import { PageCanvasEditor } from '@/components/canvas/PageCanvasEditor';

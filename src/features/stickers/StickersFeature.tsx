@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { StickerLibrary } from '@/components/stickers/StickerLibrary';
+import { StickerLibrary } from '@/features/stickers/components/StickerLibrary';
 import { Sticker } from '@/types/schema';
 import { fetchStickers } from '@/services/api'; // API関数はこれだけインポート
 import { useStickerUpload } from '@/features/stickers/hooks/useStickerUpload'; // フック
