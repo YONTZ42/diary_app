@@ -23,7 +23,7 @@ const MODES: { id: ToolMode; icon: any; label: string }[] = [
 
 export const PhotoCutoutPanel: React.FC<PhotoCutoutPanelProps> = ({ isOpen, onClose, onComplete }) => {
   // 1. 画像履歴管理 (Undo/Redo)
-  const { currentBlob, pushState, undo, redo, canUndo, canRedo, init } = useStickerEditorState();
+  const { currentBlob, pushState, undo, redo, canUndo, canRedo, init, reset } = useStickerEditorState();
   
   // 2. 描画ツール管理
   const { mode, setMode, currentPoints, isDrawing, handleMouseDown, handleMouseMove, handleMouseUp, resetDraw } = useKonvaDraw();
@@ -36,8 +36,8 @@ export const PhotoCutoutPanel: React.FC<PhotoCutoutPanelProps> = ({ isOpen, onCl
   // 初期化・リセット
   useEffect(() => {
     if (!isOpen) {
-      setImageObj(null);
-      resetDraw();
+
+    if (reset) reset();
     }
   }, [isOpen]);
 
