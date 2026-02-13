@@ -30,7 +30,6 @@ export const AppFooter: React.FC<AppFooterProps> = ({
   const creativeTabs: { id: TabId; icon: any; label: string }[] = [
     { id: 'diary', icon: BookOpen, label: 'Diary' },
     { id: 'stickers', icon: Sticker, label: 'Stickers' },
-    { id: 'friends', icon: Users, label: 'Friends' },
   ];
 
   const planTabs: { id: TabId; icon: any; label: string }[] = [
